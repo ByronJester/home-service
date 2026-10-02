@@ -17,7 +17,7 @@ class BookingController extends Controller
         $search = trim((string) $request->query('search', ''));
 
         $bookings = $request->user()->bookings()
-            ->where('status', '!=', 'Completed')
+            ->whereNotIn('status', ['Completed', 'Rejected'])
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('detailed_address', 'like', "%{$search}%")

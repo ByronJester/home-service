@@ -484,6 +484,13 @@ class BookingTest extends TestCase
         ]);
 
         $this->actingAs($client)
+            ->get(route('book-a-service'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('BookAService')
+                ->has('bookings.data', 1)
+                ->where('bookings.data.0.id', $booking->id));
+
+        $this->actingAs($client)
             ->get(route('history'))
             ->assertInertia(fn (Assert $page) => $page
                 ->component('History')
