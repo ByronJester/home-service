@@ -7,39 +7,24 @@
 </script>
 
 <script lang="ts">
-    import { Form } from '@inertiajs/svelte';
+    import { Link } from '@inertiajs/svelte';
     import AppHead from '@/components/AppHead.svelte';
-    import TextLink from '@/components/TextLink.svelte';
-    import { Button } from '@/components/ui/button';
-    import { Spinner } from '@/components/ui/spinner';
     import { logout } from '@/routes';
-    import { send } from '@/routes/verification';
-
-    let {
-        status = '',
-    }: {
-        status?: string;
-    } = $props();
 </script>
 
 <AppHead title="Email verification" />
 
-{#if status === 'verification-link-sent'}
-    <div class="mb-4 text-center text-sm font-medium text-green-600">
-        A new verification link has been sent to the email address you provided
-        during registration.
-    </div>
-{/if}
-
-<Form {...send.form()} class="space-y-6 text-center">
-    {#snippet children({ processing })}
-        <Button type="submit" disabled={processing} variant="secondary">
-            {#if processing}<Spinner />{/if}
-            Resend verification email
-        </Button>
-
-        <TextLink href={logout()} as="button" class="mx-auto block text-sm">
+<div class="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center gap-4 px-6 text-center">
+    <h1 class="text-2xl font-semibold">Email verification is not required</h1>
+    <p class="text-sm text-muted-foreground">
+        Your account is ready to use. You can continue to the app or log out.
+    </p>
+    <div class="flex items-center gap-4">
+        <Link href="/book-a-service" class="text-sm font-medium underline underline-offset-4">
+            Continue
+        </Link>
+        <Link href={logout()} method="post" as="button" class="text-sm font-medium underline underline-offset-4">
             Log out
-        </TextLink>
-    {/snippet}
-</Form>
+        </Link>
+    </div>
+</div>

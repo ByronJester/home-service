@@ -1,11 +1,10 @@
 <script lang="ts">
-    import { Link } from '@inertiajs/svelte';
-    import BookOpen from '@lucide/svelte/icons/book-open';
-    import FolderGit2 from '@lucide/svelte/icons/folder-git-2';
-    import LayoutGrid from '@lucide/svelte/icons/layout-grid';
+    import { Link, page } from '@inertiajs/svelte';
+    import BookMarked from '@lucide/svelte/icons/book-marked';
+    import CalendarRange from '@lucide/svelte/icons/calendar-range';
+    import Clock3 from '@lucide/svelte/icons/clock-3';
     import type { Snippet } from 'svelte';
     import AppLogo from '@/components/AppLogo.svelte';
-    import NavFooter from '@/components/NavFooter.svelte';
     import NavMain from '@/components/NavMain.svelte';
     import NavUser from '@/components/NavUser.svelte';
     import {
@@ -27,26 +26,20 @@
         children?: Snippet;
     } = $props();
 
-    const mainNavItems: NavItem[] = [
-        {
-            title: 'Dashboard',
-            href: dashboard(),
-            icon: LayoutGrid,
-        },
-    ];
+    const user = $derived(page.props.auth.user);
+    const isAdmin = $derived(Boolean(user?.is_admin));
 
-    const footerNavItems: NavItem[] = [
-        {
-            title: 'Repository',
-            href: 'https://github.com/laravel/svelte-starter-kit',
-            icon: FolderGit2,
-        },
-        {
-            title: 'Documentation',
-            href: 'https://laravel.com/docs/starter-kits#svelte',
-            icon: BookOpen,
-        },
-    ];
+    const mainNavItems: NavItem[] = $derived(
+        isAdmin
+            ? [
+                  { title: 'Bookings', href: '/bookings', icon: BookMarked },
+                  { title: 'Schedules', href: '/schedules', icon: CalendarRange },
+              ]
+            : [
+                  { title: 'Book a Service', href: '/book-a-service', icon: BookMarked },
+                  { title: 'History', href: '/history', icon: Clock3 },
+              ],
+    );
 </script>
 
 <Sidebar collapsible="icon" variant="inset">
@@ -73,7 +66,6 @@
     </SidebarContent>
 
     <SidebarFooter>
-        <NavFooter items={footerNavItems} />
         <NavUser />
     </SidebarFooter>
 </Sidebar>

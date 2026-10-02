@@ -45,7 +45,7 @@ return [
     |
     */
 
-    'username' => 'email',
+    'username' => 'username',
 
     'email' => 'email',
 
@@ -73,7 +73,16 @@ return [
     |
     */
 
-    'home' => '/dashboard',
+    'home' => '/book-a-service',
+
+    'redirects' => [
+        'login' => '/book-a-service',
+        'logout' => '/',
+        'register' => '/book-a-service',
+        'password-confirmation' => null,
+        'email-verification' => null,
+        'password-reset' => null,
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -146,7 +155,6 @@ return [
     'features' => [
         Features::registration(),
         Features::resetPasswords(),
-        Features::emailVerification(),
         Features::twoFactorAuthentication([
             'confirm' => true,
             'confirmPassword' => true,

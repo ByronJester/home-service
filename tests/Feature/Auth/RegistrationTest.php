@@ -17,23 +17,24 @@ class RegistrationTest extends TestCase
         $this->skipUnlessFortifyHas(Features::registration());
     }
 
-    public function test_registration_screen_can_be_rendered()
+    public function test_registration_screen_redirects_to_landing_page()
     {
         $response = $this->get(route('register'));
 
-        $response->assertOk();
+        $response->assertRedirect('/');
     }
 
-    public function test_new_users_can_register()
+    public function test_new_users_can_register_and_are_redirected_to_book_a_service()
     {
         $response = $this->post(route('register.store'), [
             'name' => 'Test User',
+            'username' => 'testuser',
             'email' => 'test@example.com',
             'password' => 'password',
             'password_confirmation' => 'password',
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect('/book-a-service');
     }
 }

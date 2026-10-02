@@ -1,442 +1,675 @@
 <script lang="ts">
-    import { Link, page } from '@inertiajs/svelte';
+    import { page, router } from '@inertiajs/svelte';
+    import { onMount } from 'svelte';
     import AppHead from '@/components/AppHead.svelte';
-    import { toUrl } from '@/lib/utils';
-    import { dashboard, login } from '@/routes';
-    import { register } from '@/routes';
 
-    const auth = $derived(page.props.auth);
+    const sampleImages = Array.from(
+        { length: 15 },
+        (_, index) => `/storage/images/samples/${index + 1}.jpeg`,
+    );
+
+    const artistImage = '/storage/images/artist/artist_1.jpeg';
+    const socialLinks = [
+        {
+            name: 'Facebook',
+            href: 'https://facebook.com',
+            path: 'M13.5 8.5h-2.3V6.7c0-.7.5-.9.9-.9H13V3.7h-2.4c-2.2 0-2.7 1.6-2.7 2.7v2.1H6.5v2.2h1.4V18h2.8v-8.1h1.9L13.5 8.5z',
+        },
+        {
+            name: 'Instagram',
+            href: 'https://instagram.com',
+            path: 'M12 2.2c2.7 0 3 0 4 .1 1 .1 1.6.2 2 .4.5.2.9.5 1.3.9.4.4.7.8.9 1.3.2.4.4 1 .4 2 .1 1 .1 1.3.1 4s0 3-.1 4c-.1 1-.2 1.6-.4 2-.2.5-.5.9-.9 1.3-.4.4-.8.7-1.3.9-.4.2-1 .4-2 .4-1 .1-1.3.1-4 .1s-3 0-4-.1c-1-.1-1.6-.2-2-.4-.5-.2-.9-.5-1.3-.9-.4-.4-.7-.8-.9-1.3-.2-.4-.4-1-.4-2-.1-1-.1-1.3-.1-4s0-3 .1-4c.1-1 .2-1.6.4-2 .2-.5.5-.9.9-1.3.4-.4.8-.7 1.3-.9.4-.2 1-.4 2-.4 1-.1 1.3-.1 4-.1zm0 1.8c-2.6 0-3 .1-4 .1-.9 0-1.4.2-1.7.3-.4.2-.7.4-1 .8-.3.3-.6.6-.8 1-.1.3-.3.8-.3 1.7 0 1-.1 1.4-.1 4s.1 3 .1 4c0 .9.2 1.4.3 1.7.2.4.4.7.8 1 .3.3.6.6 1 .8.3.1.8.3 1.7.3 1 0 1.4.1 4 .1s3-.1 4-.1c.9 0 1.4-.2 1.7-.3.4-.2.7-.4 1-.8.3-.3.6-.6.8-1 .1-.3.3-.8.3-1.7 0-1 .1-1.4.1-4s-.1-3-.1-4c0-.9-.2-1.4-.3-1.7-.2-.4-.4-.7-.8-1-.3-.3-.6-.6-1-.8-.3-.1-.8-.3-1.7-.3-1 0-1.4-.1-4-.1zm0 3.2A4.8 4.8 0 1 1 12 16.2 4.8 4.8 0 0 1 12 7.2zm0 1.8A3 3 0 1 0 12 15a3 3 0 0 0 0-6zm4.9-3.4a1.1 1.1 0 1 1-1.1 1.1 1.1 0 0 1 1.1-1.1z',
+        },
+        {
+            name: 'Twitter',
+            href: 'https://twitter.com',
+            path: 'M18.9 5.2c-.6.3-1.3.5-2 .6.7-.4 1.2-1 1.5-1.8-.7.4-1.4.7-2.2.9A3.2 3.2 0 0 0 9.6 8.1c0 .2 0 .5.1.7-2.7-.1-5.1-1.4-6.7-3.4-.3.5-.5 1-.5 1.7 0 1.1.6 2.1 1.5 2.7-.5 0-1-.2-1.5-.4v.1c0 1.6 1.1 2.9 2.6 3.2-.3.1-.6.1-.9.1-.2 0-.4 0-.7-.1.4 1.3 1.7 2.2 3.2 2.2A6.5 6.5 0 0 1 3 16.8c1.4 1 3.1 1.6 5 1.6 6.1 0 9.4-5 9.4-9.4v-.4c.7-.4 1.2-1 1.7-1.7z',
+        },
+    ];
+
+    const promoSlides = [
+        {
+            title: 'Birthday Promo',
+            discount: '10% discount',
+            description: 'Celebrate your birthday with a custom piece that feels as personal as the memory behind it.',
+            accent: 'Available in birthday month',
+            image: '/storage/images/promos/birthday.png',
+        },
+        {
+            title: 'Halloween Promo',
+            discount: '10% off',
+            description: 'Add a bold seasonal statement to your look with a dramatic design that stands out.',
+            accent: 'Available in month of November',
+            image: '/storage/images/promos/halloween.png',
+        },
+        {
+            title: 'Christmas Promo',
+            discount: '20% off',
+            description: 'Give your holiday season a personal edge with a design that makes every celebration memorable.',
+            accent: 'Available in month of December',
+            image: '/storage/images/promos/christmas.png',
+        },
+        {
+            title: 'Free Minimalist Bonus',
+            discount: '2 foot size tattoo freebies',
+            description: 'Avail 2 foot size tattoo freebies of one minimalist tattoo for a clean, thoughtful statement.',
+            accent: 'One minimalist design',
+            image: '/storage/images/promos/minimalist.png',
+        },
+    ];
+
+    let currentIndex = $state(0);
+    let promoIndex = $state(0);
+    let currentSection = $state(0);
+    let promoCycleComplete = $state(false);
+    let isModalOpen = $state(false);
+    let modalType = $state<'login' | 'register'>('login');
+    let loginPasswordVisible = $state(false);
+    let registerPasswordVisible = $state(false);
+    let registerPasswordConfirmVisible = $state(false);
+    let registerPassword = $state('');
+    let registerConfirmPassword = $state('');
+    let registerPasswordError = $state('');
+
+    function scrollToSection(sectionIndex: number) {
+        const sectionMap = {
+            0: 'quote-section',
+            1: 'artist-design-section',
+            2: 'promo-section',
+        } as const;
+
+        const sectionId = sectionMap[sectionIndex as keyof typeof sectionMap];
+        const section = document.getElementById(sectionId);
+        if (!section) return;
+
+        currentSection = sectionIndex;
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function redirectAuthenticatedUser() {
+        const user = page.props.auth?.user;
+        if (!user) return;
+
+        const destination = user.is_admin ? '/bookings' : '/book-a-service';
+        if (window.location.pathname === destination) return;
+
+        router.visit(destination, { replace: true });
+    }
+
+    onMount(() => {
+        redirectAuthenticatedUser();
+        window.addEventListener('pageshow', redirectAuthenticatedUser);
+
+        const slideInterval = window.setInterval(() => {
+            const nextIndex = (currentIndex + 1) % sampleImages.length;
+            currentIndex = nextIndex;
+
+            if (currentSection === 1 && nextIndex === 0) {
+                window.setTimeout(() => {
+                    scrollToSection(2);
+                    currentIndex = 0;
+                }, 250);
+            }
+        }, 2600);
+
+        const quoteScrollInterval = window.setInterval(() => {
+            if (currentSection === 0) {
+                scrollToSection(1);
+            }
+        }, 7000);
+
+        const promoScrollInterval = window.setInterval(() => {
+            if (currentSection !== 2 || promoCycleComplete) return;
+
+            const nextPromoIndex = promoIndex + 1;
+
+            if (nextPromoIndex < promoSlides.length) {
+                promoIndex = nextPromoIndex;
+                return;
+            }
+
+            promoIndex = 0;
+            promoCycleComplete = true;
+
+            window.setTimeout(() => {
+                const footerSection = document.getElementById('footer-section');
+                if (footerSection) {
+                    footerSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 1200);
+        }, 3000);
+
+        return () => {
+            window.removeEventListener('pageshow', redirectAuthenticatedUser);
+            window.clearInterval(slideInterval);
+            window.clearInterval(quoteScrollInterval);
+            window.clearInterval(promoScrollInterval);
+        };
+    });
+
+    function openModal(type: 'login' | 'register') {
+        modalType = type;
+        isModalOpen = true;
+    }
+
+    function closeModal() {
+        isModalOpen = false;
+    }
+
+    function handleBookingSubmit(event: SubmitEvent) {
+        event.preventDefault();
+        closeModal();
+    }
+
+    function updateRegisterPasswordMatch() {
+        registerPasswordError = registerPassword !== registerConfirmPassword && registerConfirmPassword.length > 0
+            ? 'Passwords do not match.'
+            : '';
+    }
+
+    function handleAuthSubmit(event: SubmitEvent, endpoint: string) {
+        event.preventDefault();
+
+        const target = event.currentTarget as HTMLFormElement | null;
+        if (!target) return;
+
+        if (endpoint === '/register') {
+            const password = (target.querySelector('input[name="password"]') as HTMLInputElement | null)?.value ?? '';
+            const confirmPassword = (target.querySelector('input[name="password_confirmation"]') as HTMLInputElement | null)?.value ?? '';
+
+            if (password !== confirmPassword) {
+                registerPasswordError = 'Passwords do not match.';
+                return;
+            }
+
+            registerPasswordError = '';
+        }
+
+        const formData = Object.fromEntries(new FormData(target).entries()) as Record<string, string>;
+
+        router.post(endpoint, formData, {
+            preserveScroll: true,
+            onSuccess: () => {
+                closeModal();
+            },
+        });
+    }
 </script>
 
-<AppHead title="Welcome">
+<AppHead title="ARV_InkTattoos">
     <link rel="preconnect" href="https://rsms.me/" />
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
 </AppHead>
 
-<div
-    class="flex min-h-screen flex-col items-center bg-[#FDFDFC] p-6 text-[#1b1b18] lg:justify-center lg:p-8 dark:bg-[#0a0a0a]"
->
-    <header
-        class="mb-6 w-full max-w-[335px] text-sm not-has-[nav]:hidden lg:max-w-4xl"
-    >
-        <nav class="flex items-center justify-end gap-4">
-            {#if auth.user}
-                <Link
-                    href={toUrl(dashboard())}
-                    class="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
-                >
-                    Dashboard
-                </Link>
-            {:else}
-                <Link
-                    href={toUrl(login())}
-                    class="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#19140035] dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A]"
-                >
-                    Log in
-                </Link>
-                <Link
-                    href={toUrl(register())}
-                    class="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
-                >
-                    Register
-                </Link>
-            {/if}
-        </nav>
-    </header>
-    <div
-        class="flex w-full items-center justify-center opacity-100 transition-opacity duration-750 lg:grow starting:opacity-0"
-    >
-        <main
-            class="flex w-full max-w-[335px] flex-col-reverse overflow-hidden rounded-lg lg:max-w-4xl lg:flex-row"
+<svelte:head>
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+    </style>
+</svelte:head>
+
+<div class="min-h-screen bg-[#120d0b] text-[#f7efe8] antialiased">
+    <header class="fixed top-5 right-5 z-40 flex items-center gap-3">
+        <button
+            type="button"
+            class="cursor-pointer rounded-full border border-[#d7a57a]/50 bg-[#120d0b]/80 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.28em] text-[#f7efe8] shadow-[0_8px_18px_rgba(0,0,0,0.18)] backdrop-blur-sm transition hover:border-[#e7bb8d] hover:bg-[#1b120f] hover:text-[#f5d6b2]"
+            onclick={() => openModal('login')}
         >
-            <div
-                class="flex-1 rounded-br-lg rounded-bl-lg bg-white p-6 pb-12 text-[13px] leading-5 shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] lg:rounded-tl-lg lg:rounded-br-none lg:p-20 dark:bg-[#161615] dark:text-[#EDEDEC] dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d]"
-            >
-                <h1 class="mb-1 font-medium">Let's get started</h1>
-                <p class="mb-2 text-[#706f6c] dark:text-[#A1A09A]">
-                    Laravel has an incredibly rich ecosystem. <br />We suggest
-                    starting with the following.
+            Login
+        </button>
+        <button
+            type="button"
+            class="cursor-pointer rounded-full border border-[#d7a57a] bg-[#d7a57a] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.28em] text-[#1d120f] shadow-[0_10px_24px_rgba(215,165,122,0.35)] transition hover:scale-[1.02] hover:bg-[#e7bb8d] hover:text-[#1a120f]"
+            onclick={() => openModal('register')}
+        >
+            Register
+        </button>
+    </header>
+
+    <section
+        id="quote-section"
+        class="relative flex min-h-screen w-screen items-center justify-center overflow-hidden px-6 py-12"
+    >
+        <img
+            src="/storage/images/backgrounds/1.jpeg"
+            alt=""
+            aria-hidden="true"
+            class="absolute inset-0 h-full w-full object-cover object-center"
+        />
+        <div class="absolute inset-0 bg-[linear-gradient(90deg,rgba(14,9,8,0.78)_0%,rgba(14,9,8,0.56)_48%,rgba(14,9,8,0.68)_100%),linear-gradient(180deg,rgba(14,9,8,0.25)_0%,rgba(14,9,8,0.5)_100%)]"></div>
+        <div class="absolute inset-x-0 top-8 flex justify-center">
+            <span class="rounded-full border border-[#d7a57a]/40 bg-[#d7a57a]/10 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.42em] text-[#f5d6b2]">
+                ARV_InkTattoos
+            </span>
+        </div>
+
+        <div class="relative z-10 mx-auto flex max-w-5xl flex-col items-center text-center">
+            <p class="mb-8 text-xs font-medium uppercase tracking-[0.55em] text-[#d7a57a]">
+                Home Service Tattoo Studio
+            </p>
+
+            <blockquote class="max-w-5xl text-3xl font-medium leading-tight text-[#f8f0ea] sm:text-4xl lg:text-6xl">
+                “Every tattoo tells a story only you can wear. Turn your memories into art, express who you are, and leave your mark in ink.”
+            </blockquote>
+
+            <div class="mt-10 flex items-center gap-4">
+                <button
+                    type="button"
+                    class="cursor-pointer inline-flex items-center justify-center rounded-full bg-[#d7a57a] px-7 py-3 text-sm font-semibold uppercase tracking-[0.24em] text-[#1d120f] transition-transform duration-200 hover:scale-[1.02] hover:bg-[#e7bb8d]"
+                    onclick={() => openModal('login')}
+                >
+                    Wear your story
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section
+        id="artist-design-section"
+        class="flex min-h-screen w-screen items-center justify-center bg-[#f5efe9] px-5 py-10 text-[#1c1715] sm:px-8 lg:px-16"
+    >
+        <div class="grid w-full max-w-7xl items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
+            <div class="flex flex-col items-center lg:items-start">
+                <div class="mb-5 flex items-center gap-3 self-start">
+                    <span class="h-px w-10 bg-[#8f6755]"></span>
+                    <span class="text-[10px] font-semibold uppercase tracking-[0.38em] text-[#8f6755]">
+                        Artist
+                    </span>
+                </div>
+
+                <div class="w-full max-w-md overflow-hidden rounded-[2rem] border border-[#d4b7a0] bg-[#1f1a17] p-3 shadow-[0_25px_60px_rgba(22,13,11,0.18)]">
+                    <img
+                        src={artistImage}
+                        alt="Artist portrait"
+                        class="h-[520px] w-full rounded-[1.5rem] object-cover object-center"
+                    />
+                </div>
+            </div>
+
+            <div class="w-full">
+                <p class="mb-3 text-[10px] font-semibold uppercase tracking-[0.45em] text-[#8f6755]">
+                    Signature work
                 </p>
-                <ul class="mb-4 flex flex-col lg:mb-6">
-                    <li
-                        class="relative flex items-center gap-4 py-2 before:absolute before:top-1/2 before:bottom-0 before:left-[0.4rem] before:border-l before:border-[#e3e3e0] dark:before:border-[#3E3E3A]"
-                    >
-                        <span class="relative bg-white py-1 dark:bg-[#161615]">
-                            <span
-                                class="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-[#e3e3e0] bg-[#FDFDFC] shadow-[0px_0px_1px_0px_rgba(0,0,0,0.03),0px_1px_2px_0px_rgba(0,0,0,0.06)] dark:border-[#3E3E3A] dark:bg-[#161615]"
-                            >
-                                <span
-                                    class="h-1.5 w-1.5 rounded-full bg-[#dbdbd7] dark:bg-[#3E3E3A]"
-                                ></span>
-                            </span>
-                        </span>
-                        <span>
-                            Read the
-                            <a
-                                href="https://laravel.com/docs"
-                                target="_blank"
-                                class="ml-1 inline-flex items-center space-x-1 font-medium text-[#f53003] underline underline-offset-4 dark:text-[#FF4433]"
-                            >
-                                <span>Documentation</span>
-                                <svg
-                                    width="10"
-                                    height="11"
-                                    viewBox="0 0 10 11"
-                                    fill="none"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    class="h-2.5 w-2.5"
-                                >
-                                    <path
-                                        d="M7.70833 6.95834V2.79167H3.54167M2.5 8L7.5 3.00001"
-                                        stroke="currentColor"
-                                        stroke-linecap="square"
+                <h2 class="max-w-xl text-4xl font-semibold tracking-[-0.04em] text-[#1f1714] sm:text-5xl">
+                    Ink that feels personal, bold, and unforgettable.
+                </h2>
+
+                <div class="mt-6 flex flex-wrap gap-3 text-sm text-[#43352f]">
+                    <span class="rounded-full border border-[#d8b59b] bg-[#f9efe6] px-4 py-2">Custom designs</span>
+                    <span class="rounded-full border border-[#d8b59b] bg-[#f9efe6] px-4 py-2">Fine line</span>
+                    <span class="rounded-full border border-[#d8b59b] bg-[#f9efe6] px-4 py-2">Minimalist</span>
+                    <span class="rounded-full border border-[#d8b59b] bg-[#f9efe6] px-4 py-2">Home service</span>
+                </div>
+
+                <div class="mt-8 overflow-hidden rounded-[2rem] border border-[#d7b7a0] bg-[#1b1715] shadow-[0_30px_70px_rgba(17,13,10,0.16)]">
+                    <div class="relative h-[420px] w-full overflow-hidden sm:h-[500px]">
+                        <div
+                            class="flex h-full transition-transform duration-700 ease-out"
+                            style={`transform: translateX(-${currentIndex * 100}%);`}
+                        >
+                            {#each sampleImages as image}
+                                <div class="h-full min-w-full">
+                                    <img
+                                        src={image}
+                                        alt="Tattoo sample design"
+                                        class="h-full w-full object-cover"
                                     />
-                                </svg>
-                            </a>
-                        </span>
-                    </li>
-                    <li
-                        class="relative flex items-center gap-4 py-2 before:absolute before:top-0 before:bottom-1/2 before:left-[0.4rem] before:border-l before:border-[#e3e3e0] dark:before:border-[#3E3E3A]"
+                                </div>
+                            {/each}
+                        </div>
+
+                        <div class="absolute inset-x-0 bottom-4 flex justify-center gap-2">
+                            {#each sampleImages as _, index}
+                                <button
+                                    type="button"
+                                    aria-label={`Go to slide ${index + 1}`}
+                                    class={`h-2.5 rounded-full transition-all ${
+                                        currentIndex === index ? 'w-10 bg-[#f4d3b4]' : 'w-2.5 bg-white/60'
+                                    }`}
+                                    onclick={() => (currentIndex = index)}
+                                ></button>
+                            {/each}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section
+        id="promo-section"
+        class="relative flex min-h-screen w-screen items-center justify-center overflow-hidden bg-[#120d0b] px-6 py-12"
+    >
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(215,165,122,0.18),_transparent_30%),linear-gradient(180deg,#120d0b_0%,#1c120f_38%,#0f0c0b_100%)]"></div>
+
+        <div class="relative z-10 mx-auto w-full max-w-7xl">
+            <div class="mb-8 text-center">
+                <p class="text-[10px] font-semibold uppercase tracking-[0.45em] text-[#d7a57a]">
+                    Limited Time Offers
+                </p>
+                <h2 class="mt-4 text-4xl font-semibold tracking-[-0.04em] text-[#f8f1eb] sm:text-5xl">
+                    Promo specials for your next session.
+                </h2>
+            </div>
+
+            <div class="overflow-hidden rounded-[2rem] border border-[#d7a57a]/50 bg-[#1b120f]/80 shadow-[0_30px_90px_rgba(0,0,0,0.28)]">
+                <div class="relative h-[68vh] min-h-[420px] w-full overflow-hidden">
+                    <div
+                        class="flex h-full transition-transform duration-700 ease-out"
+                        style={`transform: translateX(-${promoIndex * 100}%);`}
                     >
-                        <span class="relative bg-white py-1 dark:bg-[#161615]">
-                            <span
-                                class="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-[#e3e3e0] bg-[#FDFDFC] shadow-[0px_0px_1px_0px_rgba(0,0,0,0.03),0px_1px_2px_0px_rgba(0,0,0,0.06)] dark:border-[#3E3E3A] dark:bg-[#161615]"
-                            >
-                                <span
-                                    class="h-1.5 w-1.5 rounded-full bg-[#dbdbd7] dark:bg-[#3E3E3A]"
-                                ></span>
-                            </span>
-                        </span>
-                        <span>
-                            Watch video tutorials at
-                            <a
-                                href="https://laracasts.com"
-                                target="_blank"
-                                class="ml-1 inline-flex items-center space-x-1 font-medium text-[#f53003] underline underline-offset-4 dark:text-[#FF4433]"
-                            >
-                                <span>Laracasts</span>
-                                <svg
-                                    width="10"
-                                    height="11"
-                                    viewBox="0 0 10 11"
-                                    fill="none"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    class="h-2.5 w-2.5"
+                        {#each promoSlides as promo}
+                            <div class="h-full min-w-full px-4 py-4 sm:px-6">
+                                <div
+                                    class="flex h-full flex-col justify-center rounded-[1.75rem] border border-[#d7a57a]/30 bg-[#1a120f] p-6 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:p-10 lg:p-12"
+                                    style={`background-image: linear-gradient(135deg, rgba(17, 12, 11, 0.82), rgba(32, 21, 17, 0.7)), url('${promo.image}'); background-size: cover; background-position: center; background-repeat: no-repeat;`}
                                 >
-                                    <path
-                                        d="M7.70833 6.95834V2.79167H3.54167M2.5 8L7.5 3.00001"
-                                        stroke="currentColor"
-                                        stroke-linecap="square"
-                                    />
-                                </svg>
-                            </a>
-                        </span>
-                    </li>
-                </ul>
-                <ul class="flex gap-3 text-sm leading-normal">
-                    <li>
-                        <a
-                            href="https://cloud.laravel.com"
-                            target="_blank"
-                            class="inline-block rounded-sm border border-black bg-[#1b1b18] px-5 py-1.5 text-sm leading-normal text-white hover:border-black hover:bg-black dark:border-[#eeeeec] dark:bg-[#eeeeec] dark:text-[#1C1C1A] dark:hover:border-white dark:hover:bg-white"
-                        >
-                            Deploy now
-                        </a>
-                    </li>
-                </ul>
+                                    <div class="mb-6 inline-flex w-fit items-center rounded-full border border-[#d7a57a]/50 bg-[#d7a57a]/10 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.35em] text-[#f5d6b2] backdrop-blur-sm">
+                                        {promo.discount}
+                                    </div>
+
+                                    <h3 class="max-w-lg text-3xl font-semibold tracking-[-0.04em] text-[#fbece0] sm:text-5xl">
+                                        {promo.title}
+                                    </h3>
+
+                                    <p class="mt-5 max-w-2xl text-base text-[#e7d1c2] sm:text-lg">
+                                        {promo.description}
+                                    </p>
+
+                                    <div class="mt-8 flex flex-wrap gap-3">
+                                        <span class="rounded-full border border-[#d7a57a]/40 bg-[#d7a57a]/10 px-4 py-2 text-sm text-[#f8e6d3] backdrop-blur-sm">
+                                            {promo.accent}
+                                        </span>
+                                        <span class="rounded-full border border-[#d7a57a]/40 bg-[#d7a57a]/10 px-4 py-2 text-sm text-[#f8e6d3] backdrop-blur-sm">
+                                            Limited availability
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        {/each}
+                    </div>
+                </div>
             </div>
-            <div
-                class="bg-[#fff2f2] dark:bg-[#1D0002] relative lg:-ml-px -mb-px lg:mb-0 rounded-t-lg lg:rounded-t-none lg:rounded-r-lg aspect-[335/364] lg:aspect-auto w-full lg:w-[438px] shrink-0 overflow-hidden"
-            >
-                <!-- Laravel Logo -->
-                <svg
-                    class="w-full text-[#F53003] dark:text-[#F61500] transition-all translate-y-0 opacity-100 max-w-none duration-750 starting:opacity-0 motion-safe:starting:translate-y-6"
-                    viewBox="0 0 438 104"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    <path
-                        d="M17.2036 -3H0V102.197H49.5189V86.7187H17.2036V-3Z"
-                        fill="currentColor"
-                    />
-                    <path
-                        d="M110.256 41.6337C108.061 38.1275 104.945 35.3731 100.905 33.3681C96.8667 31.3647 92.8016 30.3618 88.7131 30.3618C83.4247 30.3618 78.5885 31.3389 74.201 33.2923C69.8111 35.2456 66.0474 37.928 62.9059 41.3333C59.7643 44.7401 57.3198 48.6726 55.5754 53.1293C53.8287 57.589 52.9572 62.274 52.9572 67.1813C52.9572 72.1925 53.8287 76.8995 55.5754 81.3069C57.3191 85.7173 59.7636 89.6241 62.9059 93.0293C66.0474 96.4361 69.8119 99.1155 74.201 101.069C78.5885 103.022 83.4247 103.999 88.7131 103.999C92.8016 103.999 96.8667 102.997 100.905 100.994C104.945 98.9911 108.061 96.2359 110.256 92.7282V102.195H126.563V32.1642H110.256V41.6337ZM108.76 75.7472C107.762 78.4531 106.366 80.8078 104.572 82.8112C102.776 84.8161 100.606 86.4183 98.0637 87.6206C95.5202 88.823 92.7004 89.4238 89.6103 89.4238C86.5178 89.4238 83.7252 88.823 81.2324 87.6206C78.7388 86.4183 76.5949 84.8161 74.7998 82.8112C73.004 80.8078 71.6319 78.4531 70.6856 75.7472C69.7356 73.0421 69.2644 70.1868 69.2644 67.1821C69.2644 64.1758 69.7356 61.3205 70.6856 58.6154C71.6319 55.9102 73.004 53.5571 74.7998 51.5522C76.5949 49.5495 78.738 47.9451 81.2324 46.7427C83.7252 45.5404 86.5178 44.9396 89.6103 44.9396C92.7012 44.9396 95.5202 45.5404 98.0637 46.7427C100.606 47.9451 102.776 49.5487 104.572 51.5522C106.367 53.5571 107.762 55.9102 108.76 58.6154C109.756 61.3205 110.256 64.1758 110.256 67.1821C110.256 70.1868 109.756 73.0421 108.76 75.7472Z"
-                        fill="currentColor"
-                    />
-                    <path
-                        d="M242.805 41.6337C240.611 38.1275 237.494 35.3731 233.455 33.3681C229.416 31.3647 225.351 30.3618 221.262 30.3618C215.974 30.3618 211.138 31.3389 206.75 33.2923C202.36 35.2456 198.597 37.928 195.455 41.3333C192.314 44.7401 189.869 48.6726 188.125 53.1293C186.378 57.589 185.507 62.274 185.507 67.1813C185.507 72.1925 186.378 76.8995 188.125 81.3069C189.868 85.7173 192.313 89.6241 195.455 93.0293C198.597 96.4361 202.361 99.1155 206.75 101.069C211.138 103.022 215.974 103.999 221.262 103.999C225.351 103.999 229.416 102.997 233.455 100.994C237.494 98.9911 240.611 96.2359 242.805 92.7282V102.195H259.112V32.1642H242.805V41.6337ZM241.31 75.7472C240.312 78.4531 238.916 80.8078 237.122 82.8112C235.326 84.8161 233.156 86.4183 230.614 87.6206C228.07 88.823 225.251 89.4238 222.16 89.4238C219.068 89.4238 216.275 88.823 213.782 87.6206C211.289 86.4183 209.145 84.8161 207.35 82.8112C205.554 80.8078 204.182 78.4531 203.236 75.7472C202.286 73.0421 201.814 70.1868 201.814 67.1821C201.814 64.1758 202.286 61.3205 203.236 58.6154C204.182 55.9102 205.554 53.5571 207.35 51.5522C209.145 49.5495 211.288 47.9451 213.782 46.7427C216.275 45.5404 219.068 44.9396 222.16 44.9396C225.251 44.9396 228.07 45.5404 230.614 46.7427C233.156 47.9451 235.326 49.5487 237.122 51.5522C238.917 53.5571 240.312 55.9102 241.31 58.6154C242.306 61.3205 242.806 64.1758 242.806 67.1821C242.805 70.1868 242.305 73.0421 241.31 75.7472Z"
-                        fill="currentColor"
-                    />
-                    <path
-                        d="M438 -3H421.694V102.197H438V-3Z"
-                        fill="currentColor"
-                    />
-                    <path
-                        d="M139.43 102.197H155.735V48.2834H183.712V32.1665H139.43V102.197Z"
-                        fill="currentColor"
-                    />
-                    <path
-                        d="M324.49 32.1665L303.995 85.794L283.498 32.1665H266.983L293.748 102.197H314.242L341.006 32.1665H324.49Z"
-                        fill="currentColor"
-                    />
-                    <path
-                        d="M376.571 30.3656C356.603 30.3656 340.797 46.8497 340.797 67.1828C340.797 89.6597 356.094 104 378.661 104C391.29 104 399.354 99.1488 409.206 88.5848L398.189 80.0226C398.183 80.031 389.874 90.9895 377.468 90.9895C363.048 90.9895 356.977 79.3111 356.977 73.269H411.075C413.917 50.1328 398.775 30.3656 376.571 30.3656ZM357.02 61.0967C357.145 59.7487 359.023 43.3761 376.442 43.3761C393.861 43.3761 395.978 59.7464 396.099 61.0967H357.02Z"
-                        fill="currentColor"
-                    />
-                </svg>
 
-                <!-- 13 -->
-                <svg
-                    class="w-[438px] max-w-none relative -mt-[6.6rem] -ml-8 lg:ml-0 [--stroke-color:#1B1B18] dark:[--stroke-color:#FF750F]"
-                    viewBox="0 0 440 392"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    <g
-                        class="mix-blend-darken dark:mix-blend-normal transition-all delay-300 opacity-100 duration-750 starting:opacity-0 text-[#1B1B18] dark:text-black"
-                    >
-                        <mask
-                            id="path-1-mask"
-                            maskUnits="userSpaceOnUse"
-                            x="-0.328613"
-                            y="103"
-                            width="338"
-                            height="299"
-                            fill="black"
-                        >
-                            <rect
-                                fill="white"
-                                x="-0.328613"
-                                y="103"
-                                width="338"
-                                height="299"
-                            />
-                            <path
-                                d="M234.936 400.8C204.136 400.8 178.936 392.4 159.336 375.6C140.136 358.8 130.536 337 130.536 310.2H200.736C200.736 318.2 203.736 324.8 209.736 330C215.736 335.2 223.736 337.8 233.736 337.8C243.336 337.8 251.136 335 257.136 329.4C263.536 323.8 266.736 316.6 266.736 307.8C266.736 299.8 263.936 293.2 258.336 288C252.736 282.8 245.536 280.2 236.736 280.2H199.536V218.4H236.736C243.536 218.4 249.336 216 254.136 211.2C258.936 206.4 261.336 200.4 261.336 193.2C261.336 184.8 258.736 178.2 253.536 173.4C248.336 168.6 241.736 166.2 233.736 166.2C226.536 166.2 220.336 168.4 215.136 172.8C210.336 177.2 207.936 182.8 207.936 189.6H141.336C141.336 164.8 150.136 144.6 167.736 129C185.336 113 207.936 105 235.536 105C263.136 105 285.536 112.2 302.736 126.6C320.336 141 329.136 160 329.136 183.6C329.136 200.8 324.536 214.8 315.336 225.6C306.136 236 294.336 243.2 279.936 247.2C297.136 252 310.736 260.2 320.736 271.8C331.136 283.4 336.336 298 336.336 315.6C336.336 340.4 326.936 360.8 308.136 376.8C289.336 392.8 264.936 400.8 234.936 400.8Z"
-                            />
-                            <path
-                                d="M26.8714 167.6H1.67139V105.2H94.6714V400.2H26.8714V167.6Z"
-                            />
-                        </mask>
-                        <path
-                            d="M234.936 400.8C204.136 400.8 178.936 392.4 159.336 375.6C140.136 358.8 130.536 337 130.536 310.2H200.736C200.736 318.2 203.736 324.8 209.736 330C215.736 335.2 223.736 337.8 233.736 337.8C243.336 337.8 251.136 335 257.136 329.4C263.536 323.8 266.736 316.6 266.736 307.8C266.736 299.8 263.936 293.2 258.336 288C252.736 282.8 245.536 280.2 236.736 280.2H199.536V218.4H236.736C243.536 218.4 249.336 216 254.136 211.2C258.936 206.4 261.336 200.4 261.336 193.2C261.336 184.8 258.736 178.2 253.536 173.4C248.336 168.6 241.736 166.2 233.736 166.2C226.536 166.2 220.336 168.4 215.136 172.8C210.336 177.2 207.936 182.8 207.936 189.6H141.336C141.336 164.8 150.136 144.6 167.736 129C185.336 113 207.936 105 235.536 105C263.136 105 285.536 112.2 302.736 126.6C320.336 141 329.136 160 329.136 183.6C329.136 200.8 324.536 214.8 315.336 225.6C306.136 236 294.336 243.2 279.936 247.2C297.136 252 310.736 260.2 320.736 271.8C331.136 283.4 336.336 298 336.336 315.6C336.336 340.4 326.936 360.8 308.136 376.8C289.336 392.8 264.936 400.8 234.936 400.8Z"
-                            fill="currentColor"
-                        />
-                        <path
-                            d="M26.8714 167.6H1.67139V105.2H94.6714V400.2H26.8714V167.6Z"
-                            fill="currentColor"
-                        />
-                        <path
-                            d="M234.936 400.8C204.136 400.8 178.936 392.4 159.336 375.6C140.136 358.8 130.536 337 130.536 310.2H200.736C200.736 318.2 203.736 324.8 209.736 330C215.736 335.2 223.736 337.8 233.736 337.8C243.336 337.8 251.136 335 257.136 329.4C263.536 323.8 266.736 316.6 266.736 307.8C266.736 299.8 263.936 293.2 258.336 288C252.736 282.8 245.536 280.2 236.736 280.2H199.536V218.4H236.736C243.536 218.4 249.336 216 254.136 211.2C258.936 206.4 261.336 200.4 261.336 193.2C261.336 184.8 258.736 178.2 253.536 173.4C248.336 168.6 241.736 166.2 233.736 166.2C226.536 166.2 220.336 168.4 215.136 172.8C210.336 177.2 207.936 182.8 207.936 189.6H141.336C141.336 164.8 150.136 144.6 167.736 129C185.336 113 207.936 105 235.536 105C263.136 105 285.536 112.2 302.736 126.6C320.336 141 329.136 160 329.136 183.6C329.136 200.8 324.536 214.8 315.336 225.6C306.136 236 294.336 243.2 279.936 247.2C297.136 252 310.736 260.2 320.736 271.8C331.136 283.4 336.336 298 336.336 315.6C336.336 340.4 326.936 360.8 308.136 376.8C289.336 392.8 264.936 400.8 234.936 400.8Z"
-                            stroke="var(--stroke-color)"
-                            stroke-width="2.4"
-                            mask="url(#path-1-mask)"
-                        />
-                        <path
-                            d="M26.8714 167.6H1.67139V105.2H94.6714V400.2H26.8714V167.6Z"
-                            stroke="var(--stroke-color)"
-                            stroke-width="2.4"
-                            mask="url(#path-1-mask)"
-                        />
-                    </g>
-
-                    <g
-                        class="transition-all delay-400 opacity-100 duration-750 starting:opacity-0 motion-safe:starting:-translate-x-[26px] text-[#F3BEC7] dark:text-[#4B0600]"
-                    >
-                        <mask
-                            id="path-2-mask"
-                            maskUnits="userSpaceOnUse"
-                            x="25.3357"
-                            y="103"
-                            width="338"
-                            height="299"
-                            fill="black"
-                        >
-                            <rect
-                                fill="white"
-                                x="25.3357"
-                                y="103"
-                                width="338"
-                                height="299"
-                            />
-                            <path
-                                d="M260.6 400.8C229.8 400.8 204.6 392.4 185 375.6C165.8 358.8 156.2 337 156.2 310.2H226.4C226.4 318.2 229.4 324.8 235.4 330C241.4 335.2 249.4 337.8 259.4 337.8C269 337.8 276.8 335 282.8 329.4C289.2 323.8 292.4 316.6 292.4 307.8C292.4 299.8 289.6 293.2 284 288C278.4 282.8 271.2 280.2 262.4 280.2H225.2V218.4H262.4C269.2 218.4 275 216 279.8 211.2C284.6 206.4 287 200.4 287 193.2C287 184.8 284.4 178.2 279.2 173.4C274 168.6 267.4 166.2 259.4 166.2C252.2 166.2 246 168.4 240.8 172.8C236 177.2 233.6 182.8 233.6 189.6H167C167 164.8 175.8 144.6 193.4 129C211 113 233.6 105 261.2 105C288.8 105 311.2 112.2 328.4 126.6C346 141 354.8 160 354.8 183.6C354.8 200.8 350.2 214.8 341 225.6C331.8 236 320 243.2 305.6 247.2C322.8 252 336.4 260.2 346.4 271.8C356.8 283.4 362 298 362 315.6C362 340.4 352.6 360.8 333.8 376.8C315 392.8 290.6 400.8 260.6 400.8Z"
-                            />
-                            <path
-                                d="M52.5357 167.6H27.3357V105.2H120.336V400.2H52.5357V167.6Z"
-                            />
-                        </mask>
-                        <path
-                            d="M260.6 400.8C229.8 400.8 204.6 392.4 185 375.6C165.8 358.8 156.2 337 156.2 310.2H226.4C226.4 318.2 229.4 324.8 235.4 330C241.4 335.2 249.4 337.8 259.4 337.8C269 337.8 276.8 335 282.8 329.4C289.2 323.8 292.4 316.6 292.4 307.8C292.4 299.8 289.6 293.2 284 288C278.4 282.8 271.2 280.2 262.4 280.2H225.2V218.4H262.4C269.2 218.4 275 216 279.8 211.2C284.6 206.4 287 200.4 287 193.2C287 184.8 284.4 178.2 279.2 173.4C274 168.6 267.4 166.2 259.4 166.2C252.2 166.2 246 168.4 240.8 172.8C236 177.2 233.6 182.8 233.6 189.6H167C167 164.8 175.8 144.6 193.4 129C211 113 233.6 105 261.2 105C288.8 105 311.2 112.2 328.4 126.6C346 141 354.8 160 354.8 183.6C354.8 200.8 350.2 214.8 341 225.6C331.8 236 320 243.2 305.6 247.2C322.8 252 336.4 260.2 346.4 271.8C356.8 283.4 362 298 362 315.6C362 340.4 352.6 360.8 333.8 376.8C315 392.8 290.6 400.8 260.6 400.8Z"
-                            fill="currentColor"
-                        />
-                        <path
-                            d="M52.5357 167.6H27.3357V105.2H120.336V400.2H52.5357V167.6Z"
-                            fill="currentColor"
-                        />
-                        <path
-                            d="M260.6 400.8C229.8 400.8 204.6 392.4 185 375.6C165.8 358.8 156.2 337 156.2 310.2H226.4C226.4 318.2 229.4 324.8 235.4 330C241.4 335.2 249.4 337.8 259.4 337.8C269 337.8 276.8 335 282.8 329.4C289.2 323.8 292.4 316.6 292.4 307.8C292.4 299.8 289.6 293.2 284 288C278.4 282.8 271.2 280.2 262.4 280.2H225.2V218.4H262.4C269.2 218.4 275 216 279.8 211.2C284.6 206.4 287 200.4 287 193.2C287 184.8 284.4 178.2 279.2 173.4C274 168.6 267.4 166.2 259.4 166.2C252.2 166.2 246 168.4 240.8 172.8C236 177.2 233.6 182.8 233.6 189.6H167C167 164.8 175.8 144.6 193.4 129C211 113 233.6 105 261.2 105C288.8 105 311.2 112.2 328.4 126.6C346 141 354.8 160 354.8 183.6C354.8 200.8 350.2 214.8 341 225.6C331.8 236 320 243.2 305.6 247.2C322.8 252 336.4 260.2 346.4 271.8C356.8 283.4 362 298 362 315.6C362 340.4 352.6 360.8 333.8 376.8C315 392.8 290.6 400.8 260.6 400.8Z"
-                            stroke="var(--stroke-color)"
-                            stroke-width="2.4"
-                            mask="url(#path-2-mask)"
-                        />
-                        <path
-                            d="M52.5357 167.6H27.3357V105.2H120.336V400.2H52.5357V167.6Z"
-                            stroke="var(--stroke-color)"
-                            stroke-width="2.4"
-                            mask="url(#path-2-mask)"
-                        />
-                    </g>
-
-                    <g
-                        class="mix-blend-color dark:mix-blend-hard-light transition-all delay-400 opacity-100 duration-750 starting:opacity-0 motion-safe:starting:-translate-x-[51px] text-[#F8B803] dark:text-[#391800]"
-                    >
-                        <mask
-                            id="path-3-mask"
-                            maskUnits="userSpaceOnUse"
-                            x="51"
-                            y="103"
-                            width="338"
-                            height="299"
-                            fill="black"
-                        >
-                            <rect
-                                fill="white"
-                                x="51"
-                                y="103"
-                                width="338"
-                                height="299"
-                            />
-                            <path
-                                d="M286.264 400.8C255.464 400.8 230.264 392.4 210.664 375.6C191.464 358.8 181.864 337 181.864 310.2H252.064C252.064 318.2 255.064 324.8 261.064 330C267.064 335.2 275.064 337.8 285.064 337.8C294.664 337.8 302.464 335 308.464 329.4C314.864 323.8 318.064 316.6 318.064 307.8C318.064 299.8 315.264 293.2 309.664 288C304.064 282.8 296.864 280.2 288.064 280.2H250.864V218.4H288.064C294.864 218.4 300.664 216 305.464 211.2C310.264 206.4 312.664 200.4 312.664 193.2C312.664 184.8 310.064 178.2 304.864 173.4C299.664 168.6 293.064 166.2 285.064 166.2C277.864 166.2 271.664 168.4 266.464 172.8C261.664 177.2 259.264 182.8 259.264 189.6H192.664C192.664 164.8 201.464 144.6 219.064 129C236.664 113 259.264 105 286.864 105C314.464 105 336.864 112.2 354.064 126.6C371.664 141 380.464 160 380.464 183.6C380.464 200.8 375.864 214.8 366.664 225.6C357.464 236 345.664 243.2 331.264 247.2C348.464 252 362.064 260.2 372.064 271.8C382.464 283.4 387.664 298 387.664 315.6C387.664 340.4 378.264 360.8 359.464 376.8C340.664 392.8 316.264 400.8 286.264 400.8Z"
-                            />
-                            <path
-                                d="M78.2 167.6H53V105.2H146V400.2H78.2V167.6Z"
-                            />
-                        </mask>
-                        <path
-                            d="M286.264 400.8C255.464 400.8 230.264 392.4 210.664 375.6C191.464 358.8 181.864 337 181.864 310.2H252.064C252.064 318.2 255.064 324.8 261.064 330C267.064 335.2 275.064 337.8 285.064 337.8C294.664 337.8 302.464 335 308.464 329.4C314.864 323.8 318.064 316.6 318.064 307.8C318.064 299.8 315.264 293.2 309.664 288C304.064 282.8 296.864 280.2 288.064 280.2H250.864V218.4H288.064C294.864 218.4 300.664 216 305.464 211.2C310.264 206.4 312.664 200.4 312.664 193.2C312.664 184.8 310.064 178.2 304.864 173.4C299.664 168.6 293.064 166.2 285.064 166.2C277.864 166.2 271.664 168.4 266.464 172.8C261.664 177.2 259.264 182.8 259.264 189.6H192.664C192.664 164.8 201.464 144.6 219.064 129C236.664 113 259.264 105 286.864 105C314.464 105 336.864 112.2 354.064 126.6C371.664 141 380.464 160 380.464 183.6C380.464 200.8 375.864 214.8 366.664 225.6C357.464 236 345.664 243.2 331.264 247.2C348.464 252 362.064 260.2 372.064 271.8C382.464 283.4 387.664 298 387.664 315.6C387.664 340.4 378.264 360.8 359.464 376.8C340.664 392.8 316.264 400.8 286.264 400.8Z"
-                            fill="currentColor"
-                        />
-                        <path
-                            d="M78.2 167.6H53V105.2H146V400.2H78.2V167.6Z"
-                            fill="currentColor"
-                        />
-                        <path
-                            d="M286.264 400.8C255.464 400.8 230.264 392.4 210.664 375.6C191.464 358.8 181.864 337 181.864 310.2H252.064C252.064 318.2 255.064 324.8 261.064 330C267.064 335.2 275.064 337.8 285.064 337.8C294.664 337.8 302.464 335 308.464 329.4C314.864 323.8 318.064 316.6 318.064 307.8C318.064 299.8 315.264 293.2 309.664 288C304.064 282.8 296.864 280.2 288.064 280.2H250.864V218.4H288.064C294.864 218.4 300.664 216 305.464 211.2C310.264 206.4 312.664 200.4 312.664 193.2C312.664 184.8 310.064 178.2 304.864 173.4C299.664 168.6 293.064 166.2 285.064 166.2C277.864 166.2 271.664 168.4 266.464 172.8C261.664 177.2 259.264 182.8 259.264 189.6H192.664C192.664 164.8 201.464 144.6 219.064 129C236.664 113 259.264 105 286.864 105C314.464 105 336.864 112.2 354.064 126.6C371.664 141 380.464 160 380.464 183.6C380.464 200.8 375.864 214.8 366.664 225.6C357.464 236 345.664 243.2 331.264 247.2C348.464 252 362.064 260.2 372.064 271.8C382.464 283.4 387.664 298 387.664 315.6C387.664 340.4 378.264 360.8 359.464 376.8C340.664 392.8 316.264 400.8 286.264 400.8Z"
-                            stroke="var(--stroke-color)"
-                            stroke-width="2.4"
-                            mask="url(#path-3-mask)"
-                        />
-                        <path
-                            d="M78.2 167.6H53V105.2H146V400.2H78.2V167.6Z"
-                            stroke="var(--stroke-color)"
-                            stroke-width="2.4"
-                            mask="url(#path-3-mask)"
-                        />
-                    </g>
-
-                    <g
-                        class="mix-blend-multiply dark:mix-blend-normal transition-all delay-400 opacity-100 duration-750 starting:opacity-0 motion-safe:starting:-translate-x-[78px] text-[#F3BEC7] dark:text-[#733000]"
-                    >
-                        <mask
-                            id="path-4-mask"
-                            maskUnits="userSpaceOnUse"
-                            x="76.6643"
-                            y="103"
-                            width="338"
-                            height="299"
-                            fill="black"
-                        >
-                            <rect
-                                fill="white"
-                                x="76.6643"
-                                y="103"
-                                width="338"
-                                height="299"
-                            />
-                            <path
-                                d="M311.929 400.8C281.129 400.8 255.929 392.4 236.329 375.6C217.129 358.8 207.529 337 207.529 310.2H277.729C277.729 318.2 280.729 324.8 286.729 330C292.729 335.2 300.729 337.8 310.729 337.8C320.329 337.8 328.129 335 334.129 329.4C340.529 323.8 343.729 316.6 343.729 307.8C343.729 299.8 340.929 293.2 335.329 288C329.729 282.8 322.529 280.2 313.729 280.2H276.529V218.4H313.729C320.529 218.4 326.329 216 331.129 211.2C335.929 206.4 338.329 200.4 338.329 193.2C338.329 184.8 335.729 178.2 330.529 173.4C325.329 168.6 318.729 166.2 310.729 166.2C303.529 166.2 297.329 168.4 292.129 172.8C287.329 177.2 284.929 182.8 284.929 189.6H218.329C218.329 164.8 227.129 144.6 244.729 129C262.329 113 284.929 105 312.529 105C340.129 105 362.529 112.2 379.729 126.6C397.329 141 406.129 160 406.129 183.6C406.129 200.8 401.529 214.8 392.329 225.6C383.129 236 371.329 243.2 356.929 247.2C374.129 252 387.729 260.2 397.729 271.8C408.129 283.4 413.329 298 413.329 315.6C413.329 340.4 403.929 360.8 385.129 376.8C366.329 392.8 341.929 400.8 311.929 400.8Z"
-                            />
-                            <path
-                                d="M103.864 167.6H78.6643V105.2H171.664V400.2H103.864V167.6Z"
-                            />
-                        </mask>
-                        <path
-                            d="M311.929 400.8C281.129 400.8 255.929 392.4 236.329 375.6C217.129 358.8 207.529 337 207.529 310.2H277.729C277.729 318.2 280.729 324.8 286.729 330C292.729 335.2 300.729 337.8 310.729 337.8C320.329 337.8 328.129 335 334.129 329.4C340.529 323.8 343.729 316.6 343.729 307.8C343.729 299.8 340.929 293.2 335.329 288C329.729 282.8 322.529 280.2 313.729 280.2H276.529V218.4H313.729C320.529 218.4 326.329 216 331.129 211.2C335.929 206.4 338.329 200.4 338.329 193.2C338.329 184.8 335.729 178.2 330.529 173.4C325.329 168.6 318.729 166.2 310.729 166.2C303.529 166.2 297.329 168.4 292.129 172.8C287.329 177.2 284.929 182.8 284.929 189.6H218.329C218.329 164.8 227.129 144.6 244.729 129C262.329 113 284.929 105 312.529 105C340.129 105 362.529 112.2 379.729 126.6C397.329 141 406.129 160 406.129 183.6C406.129 200.8 401.529 214.8 392.329 225.6C383.129 236 371.329 243.2 356.929 247.2C374.129 252 387.729 260.2 397.729 271.8C408.129 283.4 413.329 298 413.329 315.6C413.329 340.4 403.929 360.8 385.129 376.8C366.329 392.8 341.929 400.8 311.929 400.8Z"
-                            fill="currentColor"
-                        />
-                        <path
-                            d="M103.864 167.6H78.6643V105.2H171.664V400.2H103.864V167.6Z"
-                            fill="currentColor"
-                        />
-                        <path
-                            d="M311.929 400.8C281.129 400.8 255.929 392.4 236.329 375.6C217.129 358.8 207.529 337 207.529 310.2H277.729C277.729 318.2 280.729 324.8 286.729 330C292.729 335.2 300.729 337.8 310.729 337.8C320.329 337.8 328.129 335 334.129 329.4C340.529 323.8 343.729 316.6 343.729 307.8C343.729 299.8 340.929 293.2 335.329 288C329.729 282.8 322.529 280.2 313.729 280.2H276.529V218.4H313.729C320.529 218.4 326.329 216 331.129 211.2C335.929 206.4 338.329 200.4 338.329 193.2C338.329 184.8 335.729 178.2 330.529 173.4C325.329 168.6 318.729 166.2 310.729 166.2C303.529 166.2 297.329 168.4 292.129 172.8C287.329 177.2 284.929 182.8 284.929 189.6H218.329C218.329 164.8 227.129 144.6 244.729 129C262.329 113 284.929 105 312.529 105C340.129 105 362.529 112.2 379.729 126.6C397.329 141 406.129 160 406.129 183.6C406.129 200.8 401.529 214.8 392.329 225.6C383.129 236 371.329 243.2 356.929 247.2C374.129 252 387.729 260.2 397.729 271.8C408.129 283.4 413.329 298 413.329 315.6C413.329 340.4 403.929 360.8 385.129 376.8C366.329 392.8 341.929 400.8 311.929 400.8Z"
-                            stroke="var(--stroke-color)"
-                            stroke-width="2.4"
-                            mask="url(#path-4-mask)"
-                        />
-                        <path
-                            d="M103.864 167.6H78.6643V105.2H171.664V400.2H103.864V167.6Z"
-                            stroke="var(--stroke-color)"
-                            stroke-width="2.4"
-                            mask="url(#path-4-mask)"
-                        />
-                    </g>
-
-                    <g
-                        class="mix-blend-hard-light transition-all delay-400 opacity-100 duration-750 starting:opacity-0 motion-safe:starting:-translate-x-[102px] text-[#F3BEC7] dark:text-[#4B0600]"
-                    >
-                        <mask
-                            id="path-5-mask"
-                            maskUnits="userSpaceOnUse"
-                            x="102.329"
-                            y="103"
-                            width="338"
-                            height="299"
-                            fill="black"
-                        >
-                            <rect
-                                fill="white"
-                                x="102.329"
-                                y="103"
-                                width="338"
-                                height="299"
-                            />
-                            <path
-                                d="M337.593 400.8C306.793 400.8 281.593 392.4 261.993 375.6C242.793 358.8 233.193 337 233.193 310.2H303.393C303.393 318.2 306.393 324.8 312.393 330C318.393 335.2 326.393 337.8 336.393 337.8C345.993 337.8 353.793 335 359.793 329.4C366.193 323.8 369.393 316.6 369.393 307.8C369.393 299.8 366.593 293.2 360.993 288C355.393 282.8 348.193 280.2 339.393 280.2H302.193V218.4H339.393C346.193 218.4 351.993 216 356.793 211.2C361.593 206.4 363.993 200.4 363.993 193.2C363.993 184.8 361.393 178.2 356.193 173.4C350.993 168.6 344.393 166.2 336.393 166.2C329.193 166.2 322.993 168.4 317.793 172.8C312.993 177.2 310.593 182.8 310.593 189.6H243.993C243.993 164.8 252.793 144.6 270.393 129C287.993 113 310.593 105 338.193 105C365.793 105 388.193 112.2 405.393 126.6C422.993 141 431.793 160 431.793 183.6C431.793 200.8 427.193 214.8 417.993 225.6C408.793 236 396.993 243.2 382.593 247.2C399.793 252 413.393 260.2 423.393 271.8C433.793 283.4 438.993 298 438.993 315.6C438.993 340.4 429.593 360.8 410.793 376.8C391.993 392.8 367.593 400.8 337.593 400.8Z"
-                            />
-                            <path
-                                d="M129.529 167.6H104.329V105.2H197.329V400.2H129.529V167.6Z"
-                            />
-                        </mask>
-                        <path
-                            d="M337.593 400.8C306.793 400.8 281.593 392.4 261.993 375.6C242.793 358.8 233.193 337 233.193 310.2H303.393C303.393 318.2 306.393 324.8 312.393 330C318.393 335.2 326.393 337.8 336.393 337.8C345.993 337.8 353.793 335 359.793 329.4C366.193 323.8 369.393 316.6 369.393 307.8C369.393 299.8 366.593 293.2 360.993 288C355.393 282.8 348.193 280.2 339.393 280.2H302.193V218.4H339.393C346.193 218.4 351.993 216 356.793 211.2C361.593 206.4 363.993 200.4 363.993 193.2C363.993 184.8 361.393 178.2 356.193 173.4C350.993 168.6 344.393 166.2 336.393 166.2C329.193 166.2 322.993 168.4 317.793 172.8C312.993 177.2 310.593 182.8 310.593 189.6H243.993C243.993 164.8 252.793 144.6 270.393 129C287.993 113 310.593 105 338.193 105C365.793 105 388.193 112.2 405.393 126.6C422.993 141 431.793 160 431.793 183.6C431.793 200.8 427.193 214.8 417.993 225.6C408.793 236 396.993 243.2 382.593 247.2C399.793 252 413.393 260.2 423.393 271.8C433.793 283.4 438.993 298 438.993 315.6C438.993 340.4 429.593 360.8 410.793 376.8C391.993 392.8 367.593 400.8 337.593 400.8Z"
-                            fill="currentColor"
-                        />
-                        <path
-                            d="M129.529 167.6H104.329V105.2H197.329V400.2H129.529V167.6Z"
-                            fill="currentColor"
-                        />
-                        <path
-                            d="M337.593 400.8C306.793 400.8 281.593 392.4 261.993 375.6C242.793 358.8 233.193 337 233.193 310.2H303.393C303.393 318.2 306.393 324.8 312.393 330C318.393 335.2 326.393 337.8 336.393 337.8C345.993 337.8 353.793 335 359.793 329.4C366.193 323.8 369.393 316.6 369.393 307.8C369.393 299.8 366.593 293.2 360.993 288C355.393 282.8 348.193 280.2 339.393 280.2H302.193V218.4H339.393C346.193 218.4 351.993 216 356.793 211.2C361.593 206.4 363.993 200.4 363.993 193.2C363.993 184.8 361.393 178.2 356.193 173.4C350.993 168.6 344.393 166.2 336.393 166.2C329.193 166.2 322.993 168.4 317.793 172.8C312.993 177.2 310.593 182.8 310.593 189.6H243.993C243.993 164.8 252.793 144.6 270.393 129C287.993 113 310.593 105 338.193 105C365.793 105 388.193 112.2 405.393 126.6C422.993 141 431.793 160 431.793 183.6C431.793 200.8 427.193 214.8 417.993 225.6C408.793 236 396.993 243.2 382.593 247.2C399.793 252 413.393 260.2 423.393 271.8C433.793 283.4 438.993 298 438.993 315.6C438.993 340.4 429.593 360.8 410.793 376.8C391.993 392.8 367.593 400.8 337.593 400.8Z"
-                            stroke="var(--stroke-color)"
-                            stroke-width="2.4"
-                            mask="url(#path-5-mask)"
-                        />
-                        <path
-                            d="M129.529 167.6H104.329V105.2H197.329V400.2H129.529V167.6Z"
-                            stroke="var(--stroke-color)"
-                            stroke-width="2.4"
-                            mask="url(#path-5-mask)"
-                        />
-                    </g>
-                </svg>
-                <div
-                    class="absolute inset-0 rounded-t-lg lg:rounded-t-none lg:rounded-r-lg shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d]"
-                ></div>
+            <div class="mt-6 flex justify-center gap-2">
+                {#each promoSlides as _, index}
+                    <button
+                        type="button"
+                        aria-label={`Go to promo ${index + 1}`}
+                        class={`h-2.5 rounded-full transition-all ${
+                            promoIndex === index ? 'w-10 bg-[#f4d3b4]' : 'w-2.5 bg-white/50'
+                        }`}
+                        onclick={() => {
+                            if (promoCycleComplete) return;
+                            promoIndex = index;
+                        }}
+                    ></button>
+                {/each}
             </div>
-        </main>
-    </div>
-    <div class="hidden h-14.5 lg:block"></div>
+        </div>
+    </section>
+
+    <footer
+        id="footer-section"
+        class="w-full border-t border-[#d7a57a]/70 bg-[#120d0b] px-6 py-4 text-[#f9efe6]"
+    >
+        <div class="mx-auto flex max-w-6xl flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div class="text-xs text-[#f2d8c3] sm:text-sm">
+                © {new Date().getFullYear()} ARV_InkTattoos. All rights reserved.
+            </div>
+
+            <div class="flex flex-col gap-1 text-xs text-[#f2d8c3] sm:flex-row sm:items-center sm:gap-6 sm:text-sm">
+                <a href="mailto:johndoe@gmail.com" class="transition hover:text-[#f4cfaa]">
+                    johndoe@gmail.com
+                </a>
+                <a href="tel:+6397712345678" class="transition hover:text-[#f4cfaa]">
+                    +6397712345678
+                </a>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-3">
+                {#each socialLinks as social}
+                    <a
+                        href={social.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label={social.name}
+                        class="flex h-8 w-8 items-center justify-center rounded-full border border-[#d7a57a]/60 bg-[#1b120f] text-[#f7efe8] transition hover:border-[#f4cfaa] hover:text-[#f4cfaa] hover:shadow-[0_0_18px_rgba(215,165,122,0.28)] sm:h-9 sm:w-9"
+                    >
+                        <svg viewBox="0 0 24 24" class="h-3.5 w-3.5 fill-current sm:h-4 sm:w-4" aria-hidden="true">
+                            <path d={social.path}></path>
+                        </svg>
+                    </a>
+                {/each}
+            </div>
+        </div>
+    </footer>
 </div>
+
+{#if isModalOpen}
+    <div
+        class="fixed inset-0 z-50 flex items-center justify-center bg-[#120d0b]/80 px-4 py-8 backdrop-blur-sm"
+        role="dialog"
+        aria-modal="true"
+        aria-label={modalType === 'login' ? 'Login' : 'Register'}
+        tabindex="0"
+    >
+        <div
+            class="w-full max-w-lg rounded-[2rem] border border-[#d9b496] bg-[#f9f2ec] p-6 text-[#1a120f] shadow-[0_40px_80px_rgba(0,0,0,0.35)]"
+            role="document"
+        >
+            {#if modalType === 'login'}
+                <div class="mb-5 flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-[10px] font-semibold uppercase tracking-[0.35em] text-[#8f6755]">
+                            Welcome back
+                        </p>
+                        <h3 class="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[#1d120f]">
+                            Login to your account
+                        </h3>
+                    </div>
+                    <button
+                        type="button"
+                        aria-label="Close login modal"
+                        class="flex h-9 w-9 items-center justify-center rounded-full border border-[#d7b7a0] bg-white text-lg text-[#33251f] transition-colors hover:bg-[#f4e7de]"
+                        onclick={closeModal}
+                    >
+                        ×
+                    </button>
+                </div>
+
+                <form class="space-y-4" onsubmit={(event) => handleAuthSubmit(event, '/login')}>
+                    <label class="block text-sm font-medium text-[#33251f]">
+                        Username
+                        <input
+                            type="text"
+                            name="username"
+                            required
+                            class="mt-2 w-full rounded-xl border border-[#d9c4b2] bg-white px-3 py-2.5 text-base text-[#1d120f] outline-none ring-0 transition focus:border-[#b27d5b]"
+                            placeholder="Enter your username"
+                        />
+                    </label>
+
+                    <label class="block text-sm font-medium text-[#33251f]">
+                        Password
+                        <div class="relative mt-2">
+                            <input
+                                type={loginPasswordVisible ? 'text' : 'password'}
+                                name="password"
+                                required
+                                class="w-full rounded-xl border border-[#d9c4b2] bg-white px-3 py-2.5 pr-11 text-base text-[#1d120f] outline-none ring-0 transition focus:border-[#b27d5b]"
+                                placeholder="Enter your password"
+                            />
+                            <button
+                                type="button"
+                                class="absolute inset-y-0 right-3 flex cursor-pointer items-center text-[#5b463d]"
+                                aria-label={loginPasswordVisible ? 'Hide password' : 'Show password'}
+                                onclick={() => (loginPasswordVisible = !loginPasswordVisible)}
+                            >
+                                {#if loginPasswordVisible}
+                                    <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" aria-hidden="true">
+                                        <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <circle cx="12" cy="12" r="3" stroke-width="1.8"/>
+                                    </svg>
+                                {:else}
+                                    <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" aria-hidden="true">
+                                        <path d="M3 3l18 18" stroke-width="1.8" stroke-linecap="round"/>
+                                        <path d="M10.6 10.6A2.5 2.5 0 0 0 13.4 13.4" stroke-width="1.8" stroke-linecap="round"/>
+                                        <path d="M9.1 5.7A10.9 10.9 0 0 1 12 5c6.5 0 10 7 10 7a17.7 17.7 0 0 1-4.1 5.1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M5.9 7.6A16.3 16.3 0 0 0 2 12s3.5 7 10 7a11.4 11.4 0 0 0 5.3-1.4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                {/if}
+                            </button>
+                        </div>
+                    </label>
+
+                    <button
+                        type="submit"
+                        class="inline-flex w-full cursor-pointer items-center justify-center rounded-xl bg-[#1d120f] px-5 py-3 text-sm font-semibold uppercase tracking-[0.22em] text-[#f7efe8] transition hover:bg-[#33251f]"
+                    >
+                        Login
+                    </button>
+                </form>
+            {:else}
+                <div class="mb-5 flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-[10px] font-semibold uppercase tracking-[0.35em] text-[#8f6755]">
+                            New here
+                        </p>
+                        <h3 class="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[#1d120f]">
+                            Create your account
+                        </h3>
+                    </div>
+                    <button
+                        type="button"
+                        aria-label="Close register form"
+                        class="flex h-9 w-9 items-center justify-center rounded-full border border-[#d7b7a0] bg-white text-lg text-[#33251f] transition-colors hover:bg-[#f4e7de]"
+                        onclick={closeModal}
+                    >
+                        ×
+                    </button>
+                </div>
+
+                <form class="space-y-4" onsubmit={(event) => handleAuthSubmit(event, '/register')}>
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <label class="block text-sm font-medium text-[#33251f]">
+                            Name
+                            <input
+                                type="text"
+                                name="name"
+                                required
+                                class="mt-2 w-full rounded-xl border border-[#d9c4b2] bg-white px-3 py-2.5 text-base text-[#1d120f] outline-none ring-0 transition focus:border-[#b27d5b]"
+                                placeholder="Your name"
+                            />
+                        </label>
+
+                        <label class="block text-sm font-medium text-[#33251f]">
+                            Username
+                            <input
+                                type="text"
+                                name="username"
+                                required
+                                class="mt-2 w-full rounded-xl border border-[#d9c4b2] bg-white px-3 py-2.5 text-base text-[#1d120f] outline-none ring-0 transition focus:border-[#b27d5b]"
+                                placeholder="Choose a username"
+                            />
+                        </label>
+                    </div>
+
+                    <label class="block text-sm font-medium text-[#33251f]">
+                        Email
+                        <input
+                            type="email"
+                            name="email"
+                            required
+                            class="mt-2 w-full rounded-xl border border-[#d9c4b2] bg-white px-3 py-2.5 text-base text-[#1d120f] outline-none ring-0 transition focus:border-[#b27d5b]"
+                            placeholder="you@example.com"
+                        />
+                    </label>
+
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <label class="block text-sm font-medium text-[#33251f]">
+                            Password
+                            <div class="relative mt-2">
+                                <input
+                                    type={registerPasswordVisible ? 'text' : 'password'}
+                                    name="password"
+                                    required
+                                    bind:value={registerPassword}
+                                    oninput={updateRegisterPasswordMatch}
+                                    class="w-full rounded-xl border border-[#d9c4b2] bg-white px-3 py-2.5 pr-11 text-base text-[#1d120f] outline-none ring-0 transition focus:border-[#b27d5b]"
+                                    placeholder="Password"
+                                />
+                                <button
+                                    type="button"
+                                    class="absolute inset-y-0 right-3 flex cursor-pointer items-center text-[#5b463d]"
+                                    aria-label={registerPasswordVisible ? 'Hide password' : 'Show password'}
+                                    onclick={() => (registerPasswordVisible = !registerPasswordVisible)}
+                                >
+                                    {#if registerPasswordVisible}
+                                        <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" aria-hidden="true">
+                                            <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <circle cx="12" cy="12" r="3" stroke-width="1.8"/>
+                                        </svg>
+                                    {:else}
+                                        <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" aria-hidden="true">
+                                            <path d="M3 3l18 18" stroke-width="1.8" stroke-linecap="round"/>
+                                            <path d="M10.6 10.6A2.5 2.5 0 0 0 13.4 13.4" stroke-width="1.8" stroke-linecap="round"/>
+                                            <path d="M9.1 5.7A10.9 10.9 0 0 1 12 5c6.5 0 10 7 10 7a17.7 17.7 0 0 1-4.1 5.1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <path d="M5.9 7.6A16.3 16.3 0 0 0 2 12s3.5 7 10 7a11.4 11.4 0 0 0 5.3-1.4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    {/if}
+                                </button>
+                            </div>
+                        </label>
+
+                        <label class="block text-sm font-medium text-[#33251f]">
+                            Confirm password
+                            <div class="relative mt-2">
+                                <input
+                                    type={registerPasswordConfirmVisible ? 'text' : 'password'}
+                                    name="password_confirmation"
+                                    required
+                                    bind:value={registerConfirmPassword}
+                                    oninput={updateRegisterPasswordMatch}
+                                    class="w-full rounded-xl border border-[#d9c4b2] bg-white px-3 py-2.5 pr-11 text-base text-[#1d120f] outline-none ring-0 transition focus:border-[#b27d5b]"
+                                    placeholder="Confirm password"
+                                />
+                                <button
+                                    type="button"
+                                    class="absolute inset-y-0 right-3 flex cursor-pointer items-center text-[#5b463d]"
+                                    aria-label={registerPasswordConfirmVisible ? 'Hide password confirmation' : 'Show password confirmation'}
+                                    onclick={() => (registerPasswordConfirmVisible = !registerPasswordConfirmVisible)}
+                                >
+                                    {#if registerPasswordConfirmVisible}
+                                        <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" aria-hidden="true">
+                                            <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <circle cx="12" cy="12" r="3" stroke-width="1.8"/>
+                                        </svg>
+                                    {:else}
+                                        <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" aria-hidden="true">
+                                            <path d="M3 3l18 18" stroke-width="1.8" stroke-linecap="round"/>
+                                            <path d="M10.6 10.6A2.5 2.5 0 0 0 13.4 13.4" stroke-width="1.8" stroke-linecap="round"/>
+                                            <path d="M9.1 5.7A10.9 10.9 0 0 1 12 5c6.5 0 10 7 10 7a17.7 17.7 0 0 1-4.1 5.1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <path d="M5.9 7.6A16.3 16.3 0 0 0 2 12s3.5 7 10 7a11.4 11.4 0 0 0 5.3-1.4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    {/if}
+                                </button>
+                            </div>
+                            {#if registerPasswordError}
+                                <p class="mt-2 text-xs text-red-600">{registerPasswordError}</p>
+                            {/if}
+                        </label>
+                    </div>
+
+                    <button
+                        type="submit"
+                        class="inline-flex w-full cursor-pointer items-center justify-center rounded-xl bg-[#1d120f] px-5 py-3 text-sm font-semibold uppercase tracking-[0.22em] text-[#f7efe8] transition hover:bg-[#33251f]"
+                    >
+                        Register
+                    </button>
+                </form>
+            {/if}
+        </div>
+    </div>
+{/if}
