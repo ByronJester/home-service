@@ -22,7 +22,7 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('bookings/{booking}/status', [BookingController::class, 'updateStatus'])->name('bookings.status');
     Route::get('bookings/{booking}/design-picture', [BookingController::class, 'designPicture'])->name('bookings.design-picture');
     Route::get('bookings/{booking}/design-picture/download', [BookingController::class, 'downloadDesignPicture'])->name('bookings.design-picture.download');
-    Route::inertia('schedules', 'Schedules')->name('schedules');
+    Route::get('schedules', [BookingController::class, 'schedules'])->name('schedules');
 });
 
 require __DIR__.'/settings.php';

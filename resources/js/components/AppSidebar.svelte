@@ -34,6 +34,7 @@
             ? [
                   { title: 'Bookings', href: '/bookings', icon: BookMarked },
                   { title: 'Schedules', href: '/schedules', icon: CalendarRange },
+                  { title: 'History', href: '/history', icon: Clock3 },
               ]
             : [
                   { title: 'Book a Service', href: '/book-a-service', icon: BookMarked },

@@ -5,10 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable(['user_id', 'detailed_address', 'contact_number', 'body_parts', 'design_picture', 'service_date', 'price_range', 'status'])]
 class Booking extends Model
 {
+    use SoftDeletes;
+
     protected function casts(): array
     {
         return [

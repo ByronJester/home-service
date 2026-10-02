@@ -357,6 +357,80 @@ class BookingTest extends TestCase
                 ->where('bookings.data.0.user.name', 'Booking Client'));
     }
 
+    public function test_admin_bookings_page_only_lists_pending_bookings(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $client = User::factory()->create();
+
+        foreach (['Pending', 'Approved', 'Completed'] as $status) {
+            Booking::create([
+                'user_id' => $client->id,
+                'detailed_address' => "{$status} Street",
+                'contact_number' => '+1 (818)-123-4567',
+                'body_parts' => 'Forearm',
+                'design_picture' => null,
+                'service_date' => now()->addWeek(),
+                'price_range' => 300,
+                'status' => $status,
+            ]);
+        }
+
+        $this->actingAs($admin)
+            ->get(route('bookings'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Bookings')
+                ->has('bookings.data', 1)
+                ->where('bookings.data.0.status', 'Pending'));
+    }
+
+    public function test_admin_schedules_lists_approved_bookings_for_all_clients(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $client = User::factory()->create(['name' => 'Scheduled Client']);
+        $booking = Booking::create([
+            'user_id' => $client->id,
+            'detailed_address' => '22 Schedule Street',
+            'contact_number' => '+1 (818)-123-4567',
+            'body_parts' => 'Forearm',
+            'design_picture' => 'schedule-design.jpg',
+            'service_date' => now()->addWeek(),
+            'price_range' => 300,
+            'status' => 'Approved',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('schedules'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Schedules')
+                ->has('bookings.data', 1)
+                ->where('bookings.data.0.id', $booking->id)
+                ->where('bookings.data.0.user.name', 'Scheduled Client'));
+    }
+
+    public function test_admin_history_lists_completed_bookings_from_all_clients(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $client = User::factory()->create(['name' => 'Past Client']);
+        $booking = Booking::create([
+            'user_id' => $client->id,
+            'detailed_address' => '22 History Street',
+            'contact_number' => '+1 (818)-123-4567',
+            'body_parts' => 'Shoulder',
+            'design_picture' => 'history-design.jpg',
+            'service_date' => now()->subDay(),
+            'price_range' => 300,
+            'status' => 'Completed',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('history'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('History')
+                ->has('bookings.data', 1)
+                ->where('bookings.data.0.id', $booking->id)
+                ->where('bookings.data.0.user.name', 'Past Client'));
+    }
+
     public function test_clients_cannot_access_admin_bookings_or_change_booking_status(): void
     {
         $client = User::factory()->create();
@@ -404,6 +478,17 @@ class BookingTest extends TestCase
         $this->patch(route('bookings.status', $rejectedBooking), ['status' => 'rejected'])
             ->assertRedirect(route('bookings'));
         $this->assertDatabaseHas('bookings', ['id' => $rejectedBooking->id, 'status' => 'Rejected']);
+        $this->assertDatabaseHas('bookings', [
+            'id' => $rejectedBooking->id,
+            'deleted_at' => null,
+        ]);
+
+        $this->actingAs($client)
+            ->get(route('history'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('History')
+                ->where('bookings.data.0.id', $rejectedBooking->id)
+                ->where('bookings.data.0.status', 'Rejected'));
     }
 
     public function test_admin_can_mark_an_approved_booking_as_completed(): void
@@ -421,7 +506,7 @@ class BookingTest extends TestCase
 
         $this->actingAs($admin)
             ->patch(route('bookings.status', $booking), ['status' => 'completed'])
-            ->assertRedirect(route('bookings'));
+            ->assertRedirect(route('schedules'));
 
         $this->assertDatabaseHas('bookings', [
             'id' => $booking->id,

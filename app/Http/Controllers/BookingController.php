@@ -45,15 +45,23 @@ class BookingController extends Controller
     public function history(Request $request): Response
     {
         $search = trim((string) $request->query('search', ''));
+        $isAdmin = (bool) $request->user()->is_admin;
 
-        $bookings = $request->user()->bookings()
-            ->where('status', 'Completed')
+        $bookings = Booking::withTrashed()
+            ->with('user:id,name,username,email')
+            ->when(! $isAdmin, fn ($query) => $query->where('user_id', $request->user()->id))
+            ->whereIn('status', ['Completed', 'Rejected'])
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('detailed_address', 'like', "%{$search}%")
                         ->orWhere('contact_number', 'like', "%{$search}%")
                         ->orWhere('body_parts', 'like', "%{$search}%")
-                        ->orWhere('service_date', 'like', "%{$search}%");
+                        ->orWhere('service_date', 'like', "%{$search}%")
+                        ->orWhereHas('user', function ($query) use ($search) {
+                            $query->where('name', 'like', "%{$search}%")
+                                ->orWhere('username', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%");
+                        });
                 });
             })
             ->latest()
@@ -61,6 +69,38 @@ class BookingController extends Controller
             ->withQueryString();
 
         return Inertia::render('History', [
+            'bookings' => $bookings,
+            'filters' => ['search' => $search],
+            'isAdmin' => $isAdmin,
+        ]);
+    }
+
+    public function schedules(Request $request): Response
+    {
+        abort_unless($request->user()->is_admin, 403);
+
+        $search = trim((string) $request->query('search', ''));
+        $bookings = Booking::query()
+            ->with('user:id,name,username,email')
+            ->where('status', 'Approved')
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('detailed_address', 'like', "%{$search}%")
+                        ->orWhere('contact_number', 'like', "%{$search}%")
+                        ->orWhere('body_parts', 'like', "%{$search}%")
+                        ->orWhere('service_date', 'like', "%{$search}%")
+                        ->orWhereHas('user', function ($query) use ($search) {
+                            $query->where('name', 'like', "%{$search}%")
+                                ->orWhere('username', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->orderBy('service_date')
+            ->paginate(10)
+            ->withQueryString();
+
+        return Inertia::render('Schedules', [
             'bookings' => $bookings,
             'filters' => ['search' => $search],
         ]);
@@ -118,6 +158,7 @@ class BookingController extends Controller
         $search = trim((string) $request->query('search', ''));
         $bookings = Booking::query()
             ->with('user:id,name,username,email')
+            ->where('status', 'Pending')
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('detailed_address', 'like', "%{$search}%")
@@ -161,11 +202,17 @@ class BookingController extends Controller
             ]);
         }
 
-        $booking->update([
-            'status' => ucfirst($validated['status']),
-        ]);
+        if ($validated['status'] === 'rejected') {
+            $booking->update(['status' => 'Rejected']);
+        } else {
+            $booking->update([
+                'status' => ucfirst($validated['status']),
+            ]);
+        }
 
-        return to_route('bookings')->with('success', "Booking {$validated['status']}.");
+        $destination = $validated['status'] === 'completed' ? 'schedules' : 'bookings';
+
+        return to_route($destination)->with('success', "Booking {$validated['status']}.");
     }
 
     public function designPicture(Request $request, Booking $booking)
