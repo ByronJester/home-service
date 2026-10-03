@@ -6,21 +6,19 @@
 #   DATABASE_URL from a linked Render Postgres database, or DB_CONNECTION plus DB_HOST/DB_PORT/DB_DATABASE/DB_USERNAME/DB_PASSWORD
 #   CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
 
-FROM node:22-bookworm-slim AS node
-
 FROM composer:2 AS composer
 
 FROM php:8.4-cli-bookworm AS build
 
 COPY --from=composer /usr/bin/composer /usr/bin/composer
-COPY --from=node /usr/local/bin/node /usr/local/bin/node
-COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
 
-RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
-    && ln -sf /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates git unzip libatomic1 \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl xz-utils git unzip libatomic1 \
+    && curl -fsSL https://nodejs.org/dist/v22.23.2/node-v22.23.2-linux-x64.tar.xz \
+        | tar -xJ -C /usr/local --strip-components=1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && node -v \
+    && npm -v
 
 WORKDIR /app
 
@@ -44,7 +42,13 @@ RUN composer dump-autoload --optimize --no-scripts --no-interaction \
     && php artisan key:generate --force --ansi \
     && php artisan package:discover --ansi
 
-RUN node -v && npm -v && npm ci && npm run build && rm -rf node_modules .env
+# Render sets NODE_ENV=production during the image build. npm would then
+# skip the frontend build tools, and `npm run build` would fail.
+RUN npm ci --include=dev \
+    && mkdir -p database \
+    && touch database/database.sqlite \
+    && npm run build \
+    && rm -rf node_modules .env
 
 FROM php:8.4-fpm-bookworm AS runtime
 
