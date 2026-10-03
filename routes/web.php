@@ -7,6 +7,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+Route::get('/alive', function () {
+    return response()->json('Alive', 200);
+});
+
 Route::get('/', function (Request $request) {
     if ($user = $request->user()) {
         return redirect($user->is_admin ? '/bookings' : '/book-a-service');

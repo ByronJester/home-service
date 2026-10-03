@@ -19,7 +19,7 @@ COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
 RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && ln -sf /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
     && apt-get update \
-    && apt-get install -y --no-install-recommends git unzip \
+    && apt-get install -y --no-install-recommends ca-certificates git unzip libatomic1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -42,10 +42,9 @@ COPY . .
 RUN composer dump-autoload --optimize --no-scripts --no-interaction \
     && cp .env.example .env \
     && php artisan key:generate --force --ansi \
-    && php artisan package:discover --ansi \
-    && npm ci \
-    && npm run build \
-    && rm -rf node_modules .env
+    && php artisan package:discover --ansi
+
+RUN node -v && npm -v && npm ci && npm run build && rm -rf node_modules .env
 
 FROM php:8.4-fpm-bookworm AS runtime
 
