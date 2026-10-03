@@ -9,21 +9,21 @@
     );
 
     const artistImage = '/storage/images/artist/artist_1.jpeg';
-    const socialLinks = [
+    const developerLinks = [
         {
-            name: 'Facebook',
-            href: 'https://facebook.com',
-            path: 'M13.5 8.5h-2.3V6.7c0-.7.5-.9.9-.9H13V3.7h-2.4c-2.2 0-2.7 1.6-2.7 2.7v2.1H6.5v2.2h1.4V18h2.8v-8.1h1.9L13.5 8.5z',
+            name: 'LinkedIn',
+            href: 'https://www.linkedin.com/in/byron-jester-m-576181175/',
+            path: 'M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.23 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45C23.2 24 24 23.23 24 22.27V1.73C24 .77 23.2 0 22.23 0z',
         },
         {
-            name: 'Instagram',
-            href: 'https://instagram.com',
-            path: 'M12 2.2c2.7 0 3 0 4 .1 1 .1 1.6.2 2 .4.5.2.9.5 1.3.9.4.4.7.8.9 1.3.2.4.4 1 .4 2 .1 1 .1 1.3.1 4s0 3-.1 4c-.1 1-.2 1.6-.4 2-.2.5-.5.9-.9 1.3-.4.4-.8.7-1.3.9-.4.2-1 .4-2 .4-1 .1-1.3.1-4 .1s-3 0-4-.1c-1-.1-1.6-.2-2-.4-.5-.2-.9-.5-1.3-.9-.4-.4-.7-.8-.9-1.3-.2-.4-.4-1-.4-2-.1-1-.1-1.3-.1-4s0-3 .1-4c.1-1 .2-1.6.4-2 .2-.5.5-.9.9-1.3.4-.4.8-.7 1.3-.9.4-.2 1-.4 2-.4 1-.1 1.3-.1 4-.1zm0 1.8c-2.6 0-3 .1-4 .1-.9 0-1.4.2-1.7.3-.4.2-.7.4-1 .8-.3.3-.6.6-.8 1-.1.3-.3.8-.3 1.7 0 1-.1 1.4-.1 4s.1 3 .1 4c0 .9.2 1.4.3 1.7.2.4.4.7.8 1 .3.3.6.6 1 .8.3.1.8.3 1.7.3 1 0 1.4.1 4 .1s3-.1 4-.1c.9 0 1.4-.2 1.7-.3.4-.2.7-.4 1-.8.3-.3.6-.6.8-1 .1-.3.3-.8.3-1.7 0-1 .1-1.4.1-4s-.1-3-.1-4c0-.9-.2-1.4-.3-1.7-.2-.4-.4-.7-.8-1-.3-.3-.6-.6-1-.8-.3-.1-.8-.3-1.7-.3-1 0-1.4-.1-4-.1zm0 3.2A4.8 4.8 0 1 1 12 16.2 4.8 4.8 0 0 1 12 7.2zm0 1.8A3 3 0 1 0 12 15a3 3 0 0 0 0-6zm4.9-3.4a1.1 1.1 0 1 1-1.1 1.1 1.1 0 0 1 1.1-1.1z',
+            name: 'GitHub',
+            href: 'https://github.com/ByronJester',
+            path: 'M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3z',
         },
         {
-            name: 'Twitter',
-            href: 'https://twitter.com',
-            path: 'M18.9 5.2c-.6.3-1.3.5-2 .6.7-.4 1.2-1 1.5-1.8-.7.4-1.4.7-2.2.9A3.2 3.2 0 0 0 9.6 8.1c0 .2 0 .5.1.7-2.7-.1-5.1-1.4-6.7-3.4-.3.5-.5 1-.5 1.7 0 1.1.6 2.1 1.5 2.7-.5 0-1-.2-1.5-.4v.1c0 1.6 1.1 2.9 2.6 3.2-.3.1-.6.1-.9.1-.2 0-.4 0-.7-.1.4 1.3 1.7 2.2 3.2 2.2A6.5 6.5 0 0 1 3 16.8c1.4 1 3.1 1.6 5 1.6 6.1 0 9.4-5 9.4-9.4v-.4c.7-.4 1.2-1 1.7-1.7z',
+            name: 'Upwork',
+            href: 'https://www.upwork.com/freelancers/~01ccabda7db02d4c9d',
+            path: 'M18.56 13.16c-1.1 0-2.13-.47-3.07-1.23l.23-1.08.01-.04c.2-1.14.85-3.06 2.84-3.06 1.49 0 2.7 1.21 2.7 2.7-.01 1.49-1.21 2.71-2.71 2.71zm0-8.14c-2.54 0-4.51 1.65-5.31 4.37-1.22-1.84-2.15-4.04-2.69-5.89H7.83v7.11a2.55 2.55 0 0 1-2.55 2.55 2.55 2.55 0 0 1-2.54-2.55V3.5H0v7.11c0 2.91 2.37 5.3 5.28 5.3 2.91 0 5.28-2.39 5.28-5.3v-1.19c.53 1.11 1.18 2.23 1.98 3.22l-1.67 7.87h2.8l1.21-5.71c1.06.68 2.28 1.11 3.68 1.11 3 0 5.44-2.45 5.44-5.45 0-3-2.44-5.44-5.44-5.44z',
         },
     ];
 
@@ -298,7 +298,7 @@
 </svelte:head>
 
 <div class="min-h-screen bg-[#120d0b] text-[#f7efe8] antialiased">
-    <header class="fixed top-5 right-5 z-40 flex items-center gap-3">
+    <header class="fixed top-5 right-5 z-40 hidden items-center gap-3 md:flex">
         <button
             type="button"
             class="cursor-pointer rounded-full border border-[#d7a57a]/50 bg-[#120d0b]/80 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.28em] text-[#f7efe8] shadow-[0_8px_18px_rgba(0,0,0,0.18)] backdrop-blur-sm transition hover:border-[#e7bb8d] hover:bg-[#1b120f] hover:text-[#f5d6b2]"
@@ -341,13 +341,27 @@
                 “Every tattoo tells a story only you can wear. Turn your memories into art, express who you are, and leave your mark in ink.”
             </blockquote>
 
-            <div class="mt-10 flex items-center gap-4">
+            <div class="mt-10 flex items-center justify-center gap-3">
                 <button
                     type="button"
-                    class="cursor-pointer inline-flex items-center justify-center rounded-full bg-[#d7a57a] px-7 py-3 text-sm font-semibold uppercase tracking-[0.24em] text-[#1d120f] transition-transform duration-200 hover:scale-[1.02] hover:bg-[#e7bb8d]"
+                    class="hidden cursor-pointer items-center justify-center rounded-full bg-[#d7a57a] px-7 py-3 text-sm font-semibold uppercase tracking-[0.24em] text-[#1d120f] transition-transform duration-200 hover:scale-[1.02] hover:bg-[#e7bb8d] md:inline-flex"
                     onclick={() => openModal('login')}
                 >
                     Wear your story
+                </button>
+                <button
+                    type="button"
+                    class="cursor-pointer rounded-full border border-[#d7a57a]/50 bg-[#120d0b]/80 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.28em] text-[#f7efe8] shadow-[0_8px_18px_rgba(0,0,0,0.18)] backdrop-blur-sm transition hover:border-[#e7bb8d] hover:bg-[#1b120f] hover:text-[#f5d6b2] md:hidden"
+                    onclick={() => openModal('login')}
+                >
+                    Login
+                </button>
+                <button
+                    type="button"
+                    class="cursor-pointer rounded-full border border-[#d7a57a] bg-[#d7a57a] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.28em] text-[#1d120f] shadow-[0_10px_24px_rgba(215,165,122,0.35)] transition hover:scale-[1.02] hover:bg-[#e7bb8d] hover:text-[#1a120f] md:hidden"
+                    onclick={() => openModal('register')}
+                >
+                    Register
                 </button>
             </div>
         </div>
@@ -506,11 +520,12 @@
         id="footer-section"
         class="w-full border-t border-[#d7a57a]/70 bg-[#120d0b] px-6 py-4 text-[#f9efe6]"
     >
-        <div class="mx-auto flex max-w-6xl flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div class="mx-auto flex max-w-6xl flex-col items-center gap-3 text-center md:flex-row md:items-center md:justify-between md:text-left">
             <div class="text-xs text-[#f2d8c3] sm:text-sm">
                 © {new Date().getFullYear()} ARV_InkTattoos. All rights reserved.
             </div>
 
+            <!--
             <div class="flex flex-col gap-1 text-xs text-[#f2d8c3] sm:flex-row sm:items-center sm:gap-6 sm:text-sm">
                 <a href="mailto:johndoe@gmail.com" class="transition hover:text-[#f4cfaa]">
                     johndoe@gmail.com
@@ -519,21 +534,25 @@
                     +6397712345678
                 </a>
             </div>
+            -->
 
-            <div class="flex items-center gap-2 sm:gap-3">
-                {#each socialLinks as social}
-                    <a
-                        href={social.href}
-                        target="_blank"
-                        rel="noreferrer"
-                        aria-label={social.name}
-                        class="flex h-8 w-8 items-center justify-center rounded-full border border-[#d7a57a]/60 bg-[#1b120f] text-[#f7efe8] transition hover:border-[#f4cfaa] hover:text-[#f4cfaa] hover:shadow-[0_0_18px_rgba(215,165,122,0.28)] sm:h-9 sm:w-9"
-                    >
-                        <svg viewBox="0 0 24 24" class="h-3.5 w-3.5 fill-current sm:h-4 sm:w-4" aria-hidden="true">
-                            <path d={social.path}></path>
-                        </svg>
-                    </a>
-                {/each}
+            <div class="flex flex-col items-center gap-2 md:items-end">
+                <p class="text-xs text-[#f2d8c3] sm:text-sm">Designed & Developed by Byron</p>
+                <div class="flex items-center justify-center gap-2 sm:gap-3">
+                    {#each developerLinks as link}
+                        <a
+                            href={link.href}
+                            target="_blank"
+                            rel="noreferrer"
+                            aria-label={link.name}
+                            class="flex h-8 w-8 items-center justify-center rounded-full border border-[#d7a57a]/60 bg-[#1b120f] text-[#f7efe8] transition hover:border-[#f4cfaa] hover:text-[#f4cfaa] hover:shadow-[0_0_18px_rgba(215,165,122,0.28)] sm:h-9 sm:w-9"
+                        >
+                            <svg viewBox="0 0 24 24" class="h-3.5 w-3.5 fill-current sm:h-4 sm:w-4" aria-hidden="true">
+                                <path d={link.path}></path>
+                            </svg>
+                        </a>
+                    {/each}
+                </div>
             </div>
         </div>
     </footer>
