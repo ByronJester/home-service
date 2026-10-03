@@ -10,7 +10,7 @@ FROM node:22-bookworm-slim AS node
 
 FROM composer:2 AS composer
 
-FROM php:8.3-cli-bookworm AS build
+FROM php:8.4-cli-bookworm AS build
 
 COPY --from=composer /usr/bin/composer /usr/bin/composer
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
@@ -47,7 +47,7 @@ RUN composer dump-autoload --optimize --no-scripts --no-interaction \
     && npm run build \
     && rm -rf node_modules .env
 
-FROM php:8.3-fpm-bookworm AS runtime
+FROM php:8.4-fpm-bookworm AS runtime
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
