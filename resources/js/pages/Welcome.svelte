@@ -48,9 +48,89 @@
     let loginPasswordVisible = $state(false);
     let registerPasswordVisible = $state(false);
     let registerPasswordConfirmVisible = $state(false);
+    let loginUsername = $state('');
+    let loginPassword = $state('');
+    let registerName = $state('');
+    let registerUsername = $state('');
+    let registerEmail = $state('');
     let registerPassword = $state('');
     let registerConfirmPassword = $state('');
     let registerPasswordError = $state('');
+    let formErrors = $state<Record<string, string>>({});
+    let errorForm = $state<'login' | 'register' | null>(null);
+
+    const authFields = ['name', 'username', 'email', 'password', 'password_confirmation'] as const;
+
+    function normalizeErrors(errors: Record<string, unknown> | undefined): Record<string, string> {
+        const next: Record<string, string> = {};
+
+        for (const [key, value] of Object.entries(errors ?? {})) {
+            if (Array.isArray(value)) {
+                next[key] = String(value[0] ?? '');
+            } else if (typeof value === 'string' && value !== '') {
+                next[key] = value;
+            }
+        }
+
+        return next;
+    }
+
+    function readAuthDraft(): { form: 'login' | 'register'; values: Record<string, string> } | null {
+        if (typeof sessionStorage === 'undefined') return null;
+
+        const raw = sessionStorage.getItem('welcome-auth');
+        if (!raw) return null;
+
+        try {
+            const draft = JSON.parse(raw) as { form?: string; values?: Record<string, string> };
+            if (draft.form !== 'login' && draft.form !== 'register') return null;
+
+            return { form: draft.form, values: draft.values ?? {} };
+        } catch {
+            return null;
+        }
+    }
+
+    function fieldError(field: string): string {
+        if (errorForm !== modalType) return '';
+
+        return formErrors[field] ?? '';
+    }
+
+    const hasAuthErrors = $derived(authFields.some((field) => (formErrors[field] ?? '') !== ''));
+
+    function applyAuthDraft(draft: { form: 'login' | 'register'; values: Record<string, string> }) {
+        const values = draft.values;
+
+        if (draft.form === 'login') {
+            loginUsername = values.username ?? '';
+            loginPassword = values.password ?? '';
+            return;
+        }
+
+        registerName = values.name ?? '';
+        registerUsername = values.username ?? '';
+        registerEmail = values.email ?? '';
+        registerPassword = values.password ?? '';
+        registerConfirmPassword = values.password_confirmation ?? '';
+    }
+
+    $effect(() => {
+        const fromPage = normalizeErrors(page.props.errors as Record<string, unknown> | undefined);
+        if (Object.keys(fromPage).length === 0 || typeof sessionStorage === 'undefined') return;
+        if (sessionStorage.getItem('welcome-auth-dismissed') === '1') return;
+
+        const draft = readAuthDraft();
+        errorForm = draft?.form ?? errorForm;
+        formErrors = fromPage;
+
+        if (draft) {
+            modalType = draft.form;
+            applyAuthDraft(draft);
+        }
+
+        isModalOpen = true;
+    });
 
     function scrollToSection(sectionIndex: number) {
         const sectionMap = {
@@ -137,6 +217,9 @@
 
     function closeModal() {
         isModalOpen = false;
+        if (hasAuthErrors && typeof sessionStorage !== 'undefined') {
+            sessionStorage.setItem('welcome-auth-dismissed', '1');
+        }
     }
 
     function handleBookingSubmit(event: SubmitEvent) {
@@ -169,11 +252,33 @@
         }
 
         const formData = Object.fromEntries(new FormData(target).entries()) as Record<string, string>;
+        const form = endpoint === '/register' ? 'register' : 'login';
+
+        sessionStorage.setItem('welcome-auth', JSON.stringify({ form, values: formData }));
+        sessionStorage.removeItem('welcome-auth-dismissed');
 
         router.post(endpoint, formData, {
             preserveScroll: true,
-            onSuccess: () => {
-                closeModal();
+            onSuccess: (visit) => {
+                const errors = normalizeErrors(visit.props.errors as Record<string, unknown> | undefined);
+                if (Object.keys(errors).length > 0) {
+                    errorForm = form;
+                    formErrors = errors;
+                    modalType = form;
+                    isModalOpen = true;
+                    return;
+                }
+
+                formErrors = {};
+                errorForm = null;
+                sessionStorage.removeItem('welcome-auth');
+                isModalOpen = false;
+            },
+            onError: (errors) => {
+                errorForm = form;
+                formErrors = normalizeErrors(errors as Record<string, unknown>);
+                modalType = form;
+                isModalOpen = true;
             },
         });
     }
@@ -473,9 +578,13 @@
                             type="text"
                             name="username"
                             required
+                            bind:value={loginUsername}
                             class="mt-2 w-full rounded-xl border border-[#d9c4b2] bg-white px-3 py-2.5 text-base text-[#1d120f] outline-none ring-0 transition focus:border-[#b27d5b]"
                             placeholder="Enter your username"
                         />
+                        {#if fieldError('username')}
+                            <p class="mt-2 text-xs text-red-600">{fieldError('username')}</p>
+                        {/if}
                     </label>
 
                     <label class="block text-sm font-medium text-[#33251f]">
@@ -485,6 +594,7 @@
                                 type={loginPasswordVisible ? 'text' : 'password'}
                                 name="password"
                                 required
+                                bind:value={loginPassword}
                                 class="w-full rounded-xl border border-[#d9c4b2] bg-white px-3 py-2.5 pr-11 text-base text-[#1d120f] outline-none ring-0 transition focus:border-[#b27d5b]"
                                 placeholder="Enter your password"
                             />
@@ -509,6 +619,9 @@
                                 {/if}
                             </button>
                         </div>
+                        {#if fieldError('password')}
+                            <p class="mt-2 text-xs text-red-600">{fieldError('password')}</p>
+                        {/if}
                     </label>
 
                     <button
@@ -546,9 +659,13 @@
                                 type="text"
                                 name="name"
                                 required
+                                bind:value={registerName}
                                 class="mt-2 w-full rounded-xl border border-[#d9c4b2] bg-white px-3 py-2.5 text-base text-[#1d120f] outline-none ring-0 transition focus:border-[#b27d5b]"
                                 placeholder="Your name"
                             />
+                            {#if fieldError('name')}
+                                <p class="mt-2 text-xs text-red-600">{fieldError('name')}</p>
+                            {/if}
                         </label>
 
                         <label class="block text-sm font-medium text-[#33251f]">
@@ -557,9 +674,13 @@
                                 type="text"
                                 name="username"
                                 required
+                                bind:value={registerUsername}
                                 class="mt-2 w-full rounded-xl border border-[#d9c4b2] bg-white px-3 py-2.5 text-base text-[#1d120f] outline-none ring-0 transition focus:border-[#b27d5b]"
                                 placeholder="Choose a username"
                             />
+                            {#if fieldError('username')}
+                                <p class="mt-2 text-xs text-red-600">{fieldError('username')}</p>
+                            {/if}
                         </label>
                     </div>
 
@@ -569,9 +690,13 @@
                             type="email"
                             name="email"
                             required
+                            bind:value={registerEmail}
                             class="mt-2 w-full rounded-xl border border-[#d9c4b2] bg-white px-3 py-2.5 text-base text-[#1d120f] outline-none ring-0 transition focus:border-[#b27d5b]"
                             placeholder="you@example.com"
                         />
+                        {#if fieldError('email')}
+                            <p class="mt-2 text-xs text-red-600">{fieldError('email')}</p>
+                        {/if}
                     </label>
 
                     <div class="grid gap-4 sm:grid-cols-2">
@@ -605,13 +730,16 @@
                                             <path d="M9.1 5.7A10.9 10.9 0 0 1 12 5c6.5 0 10 7 10 7a17.7 17.7 0 0 1-4.1 5.1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                                             <path d="M5.9 7.6A16.3 16.3 0 0 0 2 12s3.5 7 10 7a11.4 11.4 0 0 0 5.3-1.4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                                         </svg>
-                                    {/if}
-                                </button>
-                            </div>
-                        </label>
+                                {/if}
+                            </button>
+                        </div>
+                        {#if fieldError('password')}
+                            <p class="mt-2 text-xs text-red-600">{fieldError('password')}</p>
+                        {/if}
+                    </label>
 
-                        <label class="block text-sm font-medium text-[#33251f]">
-                            Confirm password
+                    <label class="block text-sm font-medium text-[#33251f]">
+                        Confirm password
                             <div class="relative mt-2">
                                 <input
                                     type={registerPasswordConfirmVisible ? 'text' : 'password'}
@@ -645,6 +773,9 @@
                             </div>
                             {#if registerPasswordError}
                                 <p class="mt-2 text-xs text-red-600">{registerPasswordError}</p>
+                            {/if}
+                            {#if fieldError('password_confirmation')}
+                                <p class="mt-2 text-xs text-red-600">{fieldError('password_confirmation')}</p>
                             {/if}
                         </label>
                     </div>
