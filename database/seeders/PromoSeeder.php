@@ -44,7 +44,7 @@ class PromoSeeder extends Seeder
                 'title' => 'Free Minimalist Bonus',
                 'description' => 'Avail 2 foot size tattoo freebies of one minimalist tattoo for a clean, thoughtful statement.',
                 'discount' => 0,
-                'requirements' => ['One minimalist design'],
+                'requirements' => ['Avail 2 Foot Size Tattoo'],
                 'usage' => 'Limited Availability',
                 'image' => '/storage/images/promos/minimalist.png',
                 'is_active' => true,

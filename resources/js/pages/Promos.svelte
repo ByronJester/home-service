@@ -127,20 +127,21 @@
     }
 
     function onRequirementInput(event: Event) {
-        const value = (event.currentTarget as HTMLInputElement).value;
-        if (!value.includes(' ')) {
-            requirementDraft = value;
-            return;
-        }
-
-        const pieces = value.split(' ');
-        const completed = pieces.slice(0, -1).map((piece) => piece.trim()).filter(Boolean);
-        requirements = [...requirements, ...completed];
-        requirementDraft = pieces.at(-1) ?? '';
-        delete errors.requirements;
+        requirementDraft = (event.currentTarget as HTMLInputElement).value;
     }
 
     function onRequirementKeydown(event: KeyboardEvent) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            const nextRequirement = requirementDraft.trim();
+            if (nextRequirement === '') return;
+
+            requirements = [...requirements, nextRequirement];
+            requirementDraft = '';
+            delete errors.requirements;
+            return;
+        }
+
         if (event.key === 'Backspace' && requirementDraft === '' && requirements.length > 0) {
             requirements = requirements.slice(0, -1);
         }
@@ -489,11 +490,11 @@
                             value={requirementDraft}
                             oninput={onRequirementInput}
                             onkeydown={onRequirementKeydown}
-                            placeholder={requirements.length === 0 ? 'Type a requirement, then press space' : 'Add another'}
+                            placeholder={requirements.length === 0 ? 'Type a requirement, then press enter' : 'Add another'}
                             class="h-8 min-w-40 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                         />
                     </div>
-                    <p class="mt-1 text-xs text-muted-foreground">Press space to add each requirement.</p>
+                    <p class="mt-1 text-xs text-muted-foreground">Press enter to add each requirement.</p>
                     {#if fieldError('requirements')}<p class="mt-1.5 text-sm text-destructive">{fieldError('requirements')}</p>{/if}
                 </div>
 
