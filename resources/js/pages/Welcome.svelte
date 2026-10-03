@@ -27,36 +27,17 @@
         },
     ];
 
-    const promoSlides = [
-        {
-            title: 'Birthday Promo',
-            discount: '10% discount',
-            description: 'Celebrate your birthday with a custom piece that feels as personal as the memory behind it.',
-            accent: 'Available in birthday month',
-            image: '/storage/images/promos/birthday.png',
-        },
-        {
-            title: 'Halloween Promo',
-            discount: '10% off',
-            description: 'Add a bold seasonal statement to your look with a dramatic design that stands out.',
-            accent: 'Available in month of November',
-            image: '/storage/images/promos/halloween.png',
-        },
-        {
-            title: 'Christmas Promo',
-            discount: '20% off',
-            description: 'Give your holiday season a personal edge with a design that makes every celebration memorable.',
-            accent: 'Available in month of December',
-            image: '/storage/images/promos/christmas.png',
-        },
-        {
-            title: 'Free Minimalist Bonus',
-            discount: '2 foot size tattoo freebies',
-            description: 'Avail 2 foot size tattoo freebies of one minimalist tattoo for a clean, thoughtful statement.',
-            accent: 'One minimalist design',
-            image: '/storage/images/promos/minimalist.png',
-        },
-    ];
+    type PromoSlide = {
+        id: number;
+        title: string;
+        description: string | null;
+        discount: number;
+        requirements: string[];
+        usage: string;
+        image: string;
+    };
+
+    let { promos = [] }: { promos?: PromoSlide[] } = $props();
 
     let currentIndex = $state(0);
     let promoIndex = $state(0);
@@ -123,7 +104,9 @@
 
             const nextPromoIndex = promoIndex + 1;
 
-            if (nextPromoIndex < promoSlides.length) {
+            if (promos.length === 0) return;
+
+            if (nextPromoIndex < promos.length) {
                 promoIndex = nextPromoIndex;
                 return;
             }
@@ -359,30 +342,34 @@
                         class="flex h-full transition-transform duration-700 ease-out"
                         style={`transform: translateX(-${promoIndex * 100}%);`}
                     >
-                        {#each promoSlides as promo}
+                        {#each promos as promo (promo.id)}
                             <div class="h-full min-w-full px-4 py-4 sm:px-6">
                                 <div
                                     class="flex h-full flex-col justify-center rounded-[1.75rem] border border-[#d7a57a]/30 bg-[#1a120f] p-6 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:p-10 lg:p-12"
                                     style={`background-image: linear-gradient(135deg, rgba(17, 12, 11, 0.82), rgba(32, 21, 17, 0.7)), url('${promo.image}'); background-size: cover; background-position: center; background-repeat: no-repeat;`}
                                 >
                                     <div class="mb-6 inline-flex w-fit items-center rounded-full border border-[#d7a57a]/50 bg-[#d7a57a]/10 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.35em] text-[#f5d6b2] backdrop-blur-sm">
-                                        {promo.discount}
+                                        {promo.discount}% off
                                     </div>
 
                                     <h3 class="max-w-lg text-3xl font-semibold tracking-[-0.04em] text-[#fbece0] sm:text-5xl">
                                         {promo.title}
                                     </h3>
 
-                                    <p class="mt-5 max-w-2xl text-base text-[#e7d1c2] sm:text-lg">
-                                        {promo.description}
-                                    </p>
+                                    {#if promo.description}
+                                        <p class="mt-5 max-w-2xl text-base text-[#e7d1c2] sm:text-lg">
+                                            {promo.description}
+                                        </p>
+                                    {/if}
 
                                     <div class="mt-8 flex flex-wrap gap-3">
+                                        {#each promo.requirements as requirement}
+                                            <span class="rounded-full border border-[#d7a57a]/40 bg-[#d7a57a]/10 px-4 py-2 text-sm text-[#f8e6d3] backdrop-blur-sm">
+                                                {requirement}
+                                            </span>
+                                        {/each}
                                         <span class="rounded-full border border-[#d7a57a]/40 bg-[#d7a57a]/10 px-4 py-2 text-sm text-[#f8e6d3] backdrop-blur-sm">
-                                            {promo.accent}
-                                        </span>
-                                        <span class="rounded-full border border-[#d7a57a]/40 bg-[#d7a57a]/10 px-4 py-2 text-sm text-[#f8e6d3] backdrop-blur-sm">
-                                            Limited availability
+                                            {promo.usage}
                                         </span>
                                     </div>
                                 </div>
@@ -393,7 +380,7 @@
             </div>
 
             <div class="mt-6 flex justify-center gap-2">
-                {#each promoSlides as _, index}
+                {#each promos as promo, index (promo.id)}
                     <button
                         type="button"
                         aria-label={`Go to promo ${index + 1}`}

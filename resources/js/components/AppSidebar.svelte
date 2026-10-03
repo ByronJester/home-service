@@ -1,5 +1,6 @@
 <script lang="ts">
     import { Link, page } from '@inertiajs/svelte';
+    import BadgePercent from '@lucide/svelte/icons/badge-percent';
     import BookMarked from '@lucide/svelte/icons/book-marked';
     import CalendarRange from '@lucide/svelte/icons/calendar-range';
     import Clock3 from '@lucide/svelte/icons/clock-3';
@@ -35,6 +36,7 @@
                   { title: 'Bookings', href: '/bookings', icon: BookMarked },
                   { title: 'Schedules', href: '/schedules', icon: CalendarRange },
                   { title: 'History', href: '/history', icon: Clock3 },
+                  { title: 'Promos', href: '/promos', icon: BadgePercent },
               ]
             : [
                   { title: 'Book a Service', href: '/book-a-service', icon: BookMarked },

@@ -3,17 +3,23 @@
 namespace App\Http\Controllers;
 
 use App\Models\Booking;
+use App\Services\DesignPictureStorage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Http\UploadedFile;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class BookingController extends Controller
 {
+    public function __construct(private DesignPictureStorage $designPictures) {}
+
     public function index(Request $request): Response
     {
+        abort_unless(! $request->user()->is_admin, 403);
+
         $search = trim((string) $request->query('search', ''));
 
         $bookings = $request->user()->bookings()
@@ -131,11 +137,19 @@ class BookingController extends Controller
             'price_range' => ['required', 'integer', 'min:20', 'max:2000'],
         ]);
 
-        $designPicture = $validated['design_picture'];
-        $filename = Str::random(15).'.'.$designPicture->getClientOriginalExtension();
-        $storedPath = $designPicture->storeAs('booking-designs', $filename, 'local');
+        $upload = $validated['design_picture'];
 
-        if ($storedPath === false) {
+        if (! $upload instanceof UploadedFile) {
+            return back()->withErrors([
+                'design_picture' => 'The design picture could not be saved. Please try again.',
+            ]);
+        }
+
+        try {
+            $designPicture = $this->designPictures->store($upload);
+        } catch (Throwable $exception) {
+            report($exception);
+
             return back()->withErrors([
                 'design_picture' => 'The design picture could not be saved. Please try again.',
             ]);
@@ -145,7 +159,7 @@ class BookingController extends Controller
 
         $request->user()->bookings()->create([
             ...$validated,
-            'design_picture' => $filename,
+            'design_picture' => $designPicture,
         ]);
 
         return to_route('book-a-service')->with('success', 'Booking request submitted.');
@@ -215,33 +229,32 @@ class BookingController extends Controller
         return to_route($destination)->with('success', "Booking {$validated['status']}.");
     }
 
-    public function designPicture(Request $request, Booking $booking)
+    public function designPicture(Request $request, Booking $booking): HttpResponse
     {
         $this->authorizeDesignPictureAccess($request, $booking);
 
         abort_if(blank($booking->design_picture), 404);
 
-        $path = 'booking-designs/'.$booking->design_picture;
-        $disk = Storage::disk('local');
-        abort_unless($disk->exists($path), 404);
+        $image = $this->designPictures->fetch($booking->design_picture);
 
-        return $disk->response($path, $booking->design_picture, [
+        return response($image['body'], 200, [
+            'Content-Type' => $image['content_type'],
             'Cache-Control' => 'private, max-age=300',
             'X-Content-Type-Options' => 'nosniff',
         ]);
     }
 
-    public function downloadDesignPicture(Request $request, Booking $booking)
+    public function downloadDesignPicture(Request $request, Booking $booking): HttpResponse
     {
         $this->authorizeDesignPictureAccess($request, $booking);
 
         abort_if(blank($booking->design_picture), 404);
 
-        $path = 'booking-designs/'.$booking->design_picture;
-        $disk = Storage::disk('local');
-        abort_unless($disk->exists($path), 404);
+        $image = $this->designPictures->fetch($booking->design_picture);
 
-        return $disk->download($path, $booking->design_picture, [
+        return response($image['body'], 200, [
+            'Content-Type' => $image['content_type'],
+            'Content-Disposition' => 'attachment; filename='.$image['filename'],
             'Cache-Control' => 'private, no-store',
             'X-Content-Type-Options' => 'nosniff',
         ]);

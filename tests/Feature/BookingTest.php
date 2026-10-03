@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -16,7 +17,7 @@ class BookingTest extends TestCase
 
     public function test_client_can_submit_a_booking_request(): void
     {
-        Storage::fake('local');
+        $this->fakeCloudinary();
         $user = User::factory()->create();
 
         $response = $this->actingAs($user)->post(route('book-a-service.store'), [
@@ -39,9 +40,62 @@ class BookingTest extends TestCase
         ]);
 
         $booking = Booking::query()->where('user_id', $user->id)->firstOrFail();
-        $this->assertMatchesRegularExpression('/^[A-Za-z0-9]{15}\.jpg$/', $booking->design_picture);
-        $this->assertStringNotContainsString('/', $booking->design_picture);
-        Storage::disk('local')->assertExists('booking-designs/'.$booking->design_picture);
+        $this->assertSame('booking-designs/abcdefghijklmno.jpg', $booking->design_picture);
+        Http::assertSent(function ($request): bool {
+            $body = $request->body();
+
+            return $request->method() === 'POST'
+                && str_contains($request->url(), 'https://api.cloudinary.com/v1_1/test-cloud/image/upload')
+                && str_contains($body, 'name="type"')
+                && str_contains($body, 'authenticated')
+                && str_contains($body, 'name="api_key"')
+                && str_contains($body, 'test-key')
+                && str_contains($body, 'name="public_id"')
+                && ! str_contains($body, 'test-secret');
+        });
+    }
+
+    public function test_cloudinary_design_picture_is_streamed_after_authorization(): void
+    {
+        $this->fakeCloudinary();
+
+        $owner = User::factory()->create();
+        $otherClient = User::factory()->create();
+        $booking = Booking::create([
+            'user_id' => $owner->id,
+            'detailed_address' => '12 Main Street, Quezon City',
+            'contact_number' => '+1 (818)-123-1234',
+            'body_parts' => 'Left forearm',
+            'design_picture' => 'booking-designs/remote-design.png',
+            'service_date' => now()->addWeek(),
+            'price_range' => 500,
+        ]);
+
+        $this->actingAs($otherClient)
+            ->get(route('bookings.design-picture', $booking))
+            ->assertForbidden();
+
+        Http::assertNothingSent();
+
+        $this->actingAs($owner)
+            ->get(route('bookings.design-picture', $booking))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'image/png')
+            ->assertSee('remote-image', false);
+
+        $this->actingAs($owner)
+            ->get(route('bookings.design-picture.download', $booking))
+            ->assertOk()
+            ->assertHeader('content-disposition', 'attachment; filename=remote-design.png');
+
+        Http::assertSent(function ($request): bool {
+            return str_contains($request->url(), 'https://api.cloudinary.com/v1_1/test-cloud/image/download')
+                && str_contains($request->url(), 'public_id=booking-designs%2Fremote-design')
+                && str_contains($request->url(), 'format=png')
+                && str_contains($request->url(), 'type=authenticated')
+                && str_contains($request->url(), 'api_key=test-key')
+                && ! str_contains($request->url(), 'test-secret');
+        });
     }
 
     public function test_design_picture_is_visible_only_to_the_booking_owner_or_an_admin(): void
@@ -149,7 +203,7 @@ class BookingTest extends TestCase
 
     public function test_rejected_booking_does_not_keep_its_date_reserved(): void
     {
-        Storage::fake('local');
+        $this->fakeCloudinary();
         $client = User::factory()->create();
         $otherClient = User::factory()->create();
         $reservedDate = now()->addWeek()->toDateString();
@@ -325,6 +379,16 @@ class BookingTest extends TestCase
                 ->has('bookings.data', 1)
                 ->where('bookings.data.0.id', $completedBooking->id)
                 ->where('bookings.data.0.status', 'Completed'));
+    }
+
+    public function test_admin_can_open_the_client_booking_page(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->get(route('book-a-service'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('BookAService'));
     }
 
     public function test_admin_can_view_all_bookings_with_client_details(): void
@@ -539,5 +603,24 @@ class BookingTest extends TestCase
             ->assertSessionHasErrors('status');
 
         $this->assertSame('Pending', $booking->fresh()->status);
+    }
+
+    private function fakeCloudinary(): void
+    {
+        config([
+            'services.cloudinary.cloud_name' => 'test-cloud',
+            'services.cloudinary.api_key' => 'test-key',
+            'services.cloudinary.api_secret' => 'test-secret',
+        ]);
+
+        Http::fake([
+            'https://api.cloudinary.com/*/image/upload' => Http::response([
+                'public_id' => 'booking-designs/abcdefghijklmno',
+                'format' => 'jpg',
+            ]),
+            'https://api.cloudinary.com/*' => Http::response('remote-image', 200, [
+                'Content-Type' => 'image/png',
+            ]),
+        ]);
     }
 }
