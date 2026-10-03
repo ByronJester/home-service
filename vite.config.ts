@@ -10,6 +10,8 @@ const isSvelteCheck = process.argv.some((argument) =>
     argument.includes('svelte-check'),
 );
 
+const skipWayfinder = process.env.SKIP_WAYFINDER === '1';
+
 if (isSvelteCheck) {
     process.env.LARAVEL_BYPASS_ENV_CHECK ??= '1';
 }
@@ -28,9 +30,13 @@ export default defineConfig({
         inertia(),
         tailwindcss(),
         svelte(),
-        wayfinder({
-            formVariants: true,
-        }),
+        ...(skipWayfinder
+            ? []
+            : [
+                  wayfinder({
+                      formVariants: true,
+                  }),
+              ]),
     ]),
     server: {
         watch: {

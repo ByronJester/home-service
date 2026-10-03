@@ -8,25 +8,22 @@
 
 FROM composer:2 AS composer
 
-FROM php:8.4-cli-bookworm AS build
+FROM php:8.4-cli-bookworm AS vendor
 
 COPY --from=composer /usr/bin/composer /usr/bin/composer
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl xz-utils git unzip libatomic1 \
-    && curl -fsSL https://nodejs.org/dist/v22.23.2/node-v22.23.2-linux-x64.tar.xz \
-        | tar -xJ -C /usr/local --strip-components=1 \
-    && rm -rf /var/lib/apt/lists/* \
-    && node -v \
-    && npm -v
+    && apt-get install -y --no-install-recommends ca-certificates git unzip \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-ENV APP_ENV=production \
-    APP_DEBUG=false \
+ENV APP_ENV=local \
+    APP_DEBUG=true \
     APP_KEY=base64:nmjje4gNq2/L9bhvW4NPq3bRiexduTWKGUJTsY4pI2I= \
     APP_URL=http://localhost \
     DB_CONNECTION=sqlite \
+    DB_DATABASE=/app/database/database.sqlite \
     SESSION_DRIVER=array \
     CACHE_STORE=array \
     QUEUE_CONNECTION=sync \
@@ -40,15 +37,36 @@ COPY . .
 RUN composer dump-autoload --optimize --no-scripts --no-interaction \
     && cp .env.example .env \
     && php artisan key:generate --force --ansi \
-    && php artisan package:discover --ansi
-
-# Render sets NODE_ENV=production during the image build. npm would then
-# skip the frontend build tools, and `npm run build` would fail.
-RUN npm ci --include=dev \
-    && mkdir -p database \
+    && php artisan package:discover --ansi \
+    && mkdir -p \
+        database \
+        storage/framework/cache/data \
+        storage/framework/sessions \
+        storage/framework/views \
+        storage/logs \
+        bootstrap/cache \
     && touch database/database.sqlite \
-    && npm run build \
-    && rm -rf node_modules .env
+    && php artisan wayfinder:generate --with-form --ansi \
+    && rm -f .env
+
+# Official Node image. Render sets NODE_ENV=production during the image
+# build, which would skip the frontend tools. Wayfinder types are already
+# generated in the vendor stage, so this build does not call PHP.
+FROM node:22-bookworm AS assets
+
+WORKDIR /app
+
+COPY package.json package-lock.json .npmrc ./
+
+RUN NODE_ENV=development npm ci --include=dev --ignore-scripts=false
+
+COPY --from=vendor /app /tmp/src
+RUN rm -rf /tmp/src/vendor /tmp/src/node_modules \
+    && cp -a /tmp/src/. /app/ \
+    && rm -rf /tmp/src
+
+ENV SKIP_WAYFINDER=1
+RUN npm run build
 
 FROM php:8.4-fpm-bookworm AS runtime
 
@@ -72,7 +90,8 @@ COPY docker/nginx.conf /etc/nginx/conf.d/laravel.conf
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/uploads.ini /usr/local/etc/php/conf.d/uploads.ini
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-COPY --from=build /app /var/www/html
+COPY --from=vendor /app /var/www/html
+COPY --from=assets /app/public/build /var/www/html/public/build
 
 WORKDIR /var/www/html
 
